@@ -1,0 +1,301 @@
+{
+  "paper_id": "paper:unified_representation_of_molecules_and_crystals_for_machine:2017",
+  "title": "Unified representation of molecules and crystals for machine learning",
+  "year": 2017,
+  "domain": "chemistry",
+  "venue": "Machine Learning: Science and Technology",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/13734_31e12b8d558a7515f3a1e3337551f5f30e466cde/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "Many-body tensor representation (MBTR), a unified numerical representation for molecules and periodic crystals usable with kernel machine-learning models for energies, forces, and phase-diagram screening",
+    "input_data": "Prior representations and constraints from Coulomb matrix (CM), bag of bonds (BoB), many-body expansions, symmetry functions, and histograms of distances/angles; benchmark datasets: 7,211 QM7b/GDB7-13 organic molecules with up to 7 heavy atoms from C, N, O, S, Cl saturated with H, PBE-relaxed geometries and PBE0 atomization energies/polarizabilities; about 11k ABC2D6 elpasolite crystals with 12 elements and DFT/PBE formation energies; 4,611 ABC2 ternary alloys with 22 non-radioactive elements from groups 1, 2, and 13-15 from OQMD with DFT/PBE properties; MD17 trajectories of 8 organic molecules simulated at 500 K for 150k to 1M time steps of 0.5 fs with DFT/PBE+Tkatchenko-Scheffler energies and forces; 153 Pt-group/transition-metal binary alloy datasets computed at DFT/PBE level",
+    "user_intent": "Reduce the cost of repeated first-principles atomistic simulations by enabling accurate, data-efficient interpolation across arbitrary atomistic systems, while addressing prior representations that were not simultaneously invariant, unique, continuous/differentiable, general for finite and periodic systems, fast, and data-efficient",
+    "quantifiable_goal": "Demonstrate competitive prediction accuracy, including molecular atomization-energy errors below chemical accuracy of 1 kcal/mol on 5k training molecules, crystal formation-energy errors on the order of meV/atom, accurate MD17 energy/force interpolation from 1k-10k references, and correct convex-hull identification while saving a substantial fraction of DFT calculations"
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Kernel-based quantum-machine-learning models require a representation that maps atomistic systems into one regression space and should be invariant to translation, rotation, and same-element permutation, unique, continuous or differentiable, general for molecules and crystals, fast, and data-efficient. [Gap] Existing CM and BoB representations only partially meet these requirements: CM diagonalization loses information, CM sorting creates discontinuities, BoB can fail to distinguish homometric molecules and has derivative discontinuities, and Z-based encodings are not ideal for chemical interpolation. [Decision] Analyze CM/BoB as starting points and retain their useful element-stratified many-body information while redesigning the representation to avoid sorting and support arbitrary systems.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Coulomb matrix and bag-of-bonds representation analysis",
+        "version": ""
+      },
+      "parameters": {
+        "required_invariances": "translation, rotation, permutation of same nuclear charges",
+        "required_properties": "unique, continuous, differentiable, general for finite and periodic systems, fast, data-efficient",
+        "prior_representations_considered": "CM, BoB, Behler-Parrinello symmetry functions, histograms of distances/angles/dihedrals"
+      },
+      "observation": "The authors identified CM/BoB as useful but insufficient baselines: CM sorting creates discontinuities and diagonalization loses uniqueness; BoB removes atom-order dependence but cannot distinguish homometric molecules and has non-smooth derivatives.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] BoB stratifies pairwise Coulomb-like terms by element pairs, but uses sorted lists rather than a continuous coordinate axis. [Gap] A representation was needed that keeps element stratification but avoids sorting-induced discontinuities and can be extended beyond pair distances. [Decision] Define MBTR as distributions of k-body geometric terms stratified by chemical elements, replacing Dirac deltas by broadened probability distributions and adding optional weighting and element-correlation matrices.",
+      "action": "design",
+      "tool": {
+        "name": "Many-body tensor representation",
+        "version": ""
+      },
+      "parameters": {
+        "general_form": "f_k(x,z) over k-body atom tuples and element tuples",
+        "broadening_distribution": "normal distribution D",
+        "canonical_k_body_terms": "k=1 atom counts; k=2 inverse distances; k=3 angles; k=4 dihedral angles",
+        "similarity_metric": "Euclidean distance between MBTR representations",
+        "element_correlation_matrix": "C, identity in reported experiments"
+      },
+      "observation": "The resulting MBTR encodes distributions of many-body terms on a continuous real-space axis, is interpretable and visualizable, and can represent whole molecules using element-stratified k-body tensors without atom sorting.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Periodic crystals correspond to unit cells surrounded by infinitely many translated images, so a naive all-image many-body sum diverges. Many applications also require forces, so representation gradients are needed. [Gap] The molecular MBTR definition had to be adapted to periodic boundary conditions and made differentiable with respect to Cartesian coordinates. [Decision] Require one index of each periodic k-tuple to lie in the primitive unit cell, use decaying weighting functions to ensure convergence, and derive or compute analytic gradients of the MBTR terms.",
+      "action": "design",
+      "tool": {
+        "name": "Periodic MBTR with analytic gradients",
+        "version": ""
+      },
+      "parameters": {
+        "periodic_constraint": "one atom index in each k-tuple must be in the same primitive unit cell",
+        "convergence_strategy": "exponentially decaying or distance-decaying weights w_k",
+        "gradient_requirement": "derive ∇f_k from ∇w_k, ∇g_k, and ∇D, or use automatic differentiation",
+        "example_visualizations": "k=2 inverse-distance distribution for aspirin; k=3 angle distribution for fcc NaCl"
+      },
+      "observation": "The periodic construction avoids double counting and divergent sums, preserves translational symmetry, and allows MBTR derivatives to be visualized for molecular and crystalline examples.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] A concrete discretized representation is required for numerical kernel regression. [Gap] MBTR has continuous axes and many possible choices of k-body functions, grids, broadenings, weights, and indexing schemes; these must be fixed for each benchmark. [Decision] Discretize MBTR axes into finite tensors, linearize element ranks, exclude reversals where appropriate, use normal broadening with optimized dataset-dependent σ, and use the parametrizations reported in the supplement.",
+      "action": "design",
+      "tool": {
+        "name": "Discretized MBTR parametrization",
+        "version": ""
+      },
+      "parameters": {
+        "broadening_distribution": "normal distribution",
+        "element_correlation_matrices": "identity matrices C_alpha,beta = delta_alpha=beta",
+        "molecular_energy_terms": "k=2 inverse distance p^-1 with p^-2 weight; k=3 angle with 1/(pqr) weight; 100 grid points each",
+        "crystal_energy_terms": "k=1 counts plus k=2 inverse distance p^-1 with p^-2 weight",
+        "MD17_energy_terms": "k=2 inverse distance and k=3 angle, 30 grid points each, unit weights",
+        "MD17_sGDML_terms": "k=2 inverse distance, 16 grid points, unit weight",
+        "phase_diagram_terms": "k=2 inverse distance, x_min=0, delta_x=5e-3, 100 grid points, p^-2 weight"
+      },
+      "observation": "A family of MBTR feature matrices was instantiated for molecular properties, crystalline formation energies, MD17 dynamics, sGDML force learning, and phase-diagram active learning.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] The first validation target was interpolation across changes in molecular chemical structure, where relaxed geometries remove much of the conformational variability. [Gap] MBTR needed to be compared against established molecular representations under the same supervised-learning setting. [Decision] Train kernel ridge regression models on 5,000 QM7b molecules and evaluate on 2,000 held-out molecules for PBE0 atomization energy and isotropic polarizability.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Kernel ridge regression with MBTR",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "QM7b/GDB7-13, 7,211 molecules",
+        "training_size": "5,000 molecules",
+        "test_size": "2,000 molecules",
+        "targets": "PBE0 atomization energy E and isotropic polarizability alpha",
+        "kernels": "linear and Gaussian for MBTR",
+        "baseline_representations": "CM, BoB, BAML, SOAP, FCHL19"
+      },
+      "observation": "For atomization energy, MBTR with Gaussian kernel achieved MAE 0.60 kcal/mol and RMSE 0.97 kcal/mol; MBTR linear achieved MAE 0.74 kcal/mol and RMSE 1.14 kcal/mol. For polarizability, MBTR Gaussian achieved MAE 0.04 Å^3 and RMSE 0.06 Å^3. The energy MAE was below 1 kcal/mol chemical accuracy.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] A unified representation must also interpolate across crystal chemistry in periodic solids. [Gap] Molecular benchmark success does not establish performance for periodic crystals or larger chemical diversity. [Decision] Train MBTR/KRR models on DFT/PBE formation energies for ABC2D6 elpasolites and ABC2 ternary compounds, then compare errors and examine the effect of adding more chemical elements.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Kernel ridge regression with periodic MBTR",
+        "version": ""
+      },
+      "parameters": {
+        "elpasolite_dataset": "about 11k ABC2D6 structures, AlNaK2F6 prototype, 12 elements",
+        "elpasolite_training_size": "9,086 crystals",
+        "elpasolite_test_size": "2,272 crystals",
+        "ternary_dataset": "4,611 ABC2 ternary alloys, 22 non-radioactive elements from groups 1, 2, 13-15",
+        "ternary_training_size": "3,594 crystals",
+        "target": "DFT/PBE formation energy",
+        "best_kernel": "Gaussian MBTR"
+      },
+      "observation": "For ABC2D6 elpasolites, MBTR Gaussian achieved RMSE 8.1 meV/atom and MAE 4.7 meV/atom with 9,086 training crystals. For ABC2 ternaries, MBTR Gaussian achieved RMSE 31 meV/atom and MAE 23 meV/atom, larger than an elpasolite model of the same training size, consistent with increased chemical dimensionality.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Molecular-dynamics applications require interpolation over geometry changes for a fixed molecule, not only changes in composition. [Gap] MBTR had to be tested on high-temperature ab initio trajectories and compared to a Coulomb-matrix variant adapted for dynamics. [Decision] Train energy-only models on 10,000 MD17 configurations and validate on 2,000 held-out configurations for each of 8 organic molecules.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Energy-only KRR on MD17 with MBTR",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "MD17 trajectories of benzene, uracil, naphthalene, aspirin, salicylic acid, malonaldehyde, ethanol, and toluene",
+        "simulation_conditions": "500 K; 150k to 1M time steps; 0.5 fs time step; DFT/PBE plus Tkatchenko-Scheffler dispersion",
+        "training_size": "10,000 configurations per molecule",
+        "validation_size": "2,000 configurations per molecule",
+        "models": "CM_md Gaussian/Laplacian; MBTR linear/Gaussian/Laplacian"
+      },
+      "observation": "Nonlinear MBTR Gaussian was best overall among energy-only models, with MAEs including 0.026 kcal/mol for benzene, 0.031 kcal/mol for uracil, 0.068 kcal/mol for naphthalene, 0.248 kcal/mol for aspirin, 0.068 kcal/mol for salicylic acid, 0.097 kcal/mol for malonaldehyde, 0.060 kcal/mol for ethanol, and 0.103 kcal/mol for toluene.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Differentiating energy-only machine-learning potentials can introduce force errors, while electronic-structure calculations often provide reference forces at little extra cost. [Gap] Plain KRR is not designed for force-only training, and MBTR needed to be tested in a force-learning framework. [Decision] Replace the CM_md representation inside symmetrized gradient-domain machine learning with a 2-body MBTR representation and train on 1,000 MD17 configurations using reference forces.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "sGDML with MBTR and symmetrized Matern kernel",
+        "version": ""
+      },
+      "parameters": {
+        "training_size": "1,000 configurations per molecule",
+        "kernel": "Matern kernel augmented with symmetric molecular permutations",
+        "representation": "2-body MBTR",
+        "kernel_matrix_dimensionalities": "27k to 63k",
+        "comparison_models": "sGDML/CM_md, FCHL19 Gaussian, PaiNN"
+      },
+      "observation": "sGDML/MBTR performed as well as or better than sGDML/CM_md for energy and force predictions. Reported sGDML/MBTR force MAEs were 0.15, 0.17, 0.09, 0.48, 0.18, 0.36, 0.26, and 0.13 kcal/mol/Å for benzene, uracil, naphthalene, aspirin, salicylic acid, malonaldehyde, ethanol, and toluene respectively. Learning curves showed MBTR/CM_md MAE reductions up to 50%-60%, especially below 100 training samples.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Industrially relevant Pt-group/transition-metal binary-alloy phase diagrams require identifying low-energy convex-hull structures. [Gap] The available datasets contained only at most a few hundred structures per alloy; direct ML on such small data gave energy errors large enough to produce wrong convex hulls. [Decision] Use a simple active-learning loop: start from a few random structures, train MBTR models, predict candidate energies, request DFT energies only for structures predicted to be low in energy, add them to training, and iterate.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "MBTR active learning for convex-hull identification",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "153 Pt-group/transition-metal binary alloys computed at DFT/PBE level",
+        "selection_rule": "calculate or look up DFT only for structures predicted to be low in energy",
+        "control_parameter": "energy threshold below which DFT calculations are requested",
+        "example_system": "Ag_xPt_1-x"
+      },
+      "observation": "For AgPt, the active-learning model selected 357 DFT calculations for training and predicted 331 other structures as high energy, saving 48% of DFT calculations while still identifying the correct convex hull; the predicted-energy MAE for the 331 predicted structures was 39 meV/atom.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] The benchmarks showed MBTR can represent molecules, crystals, and MD geometries in several learning frameworks. [Gap] The authors still needed to assess practical limits and implementation routes for future use. [Decision] Release implementations and identify limitations such as memory growth for many element species, degradation of whole-system representations with increasing atom count, and sensitivity of ML training to faulty reference calculations.",
+      "action": "reflection",
+      "tool": {
+        "name": "Post-benchmark analysis and code release",
+        "version": ""
+      },
+      "parameters": {
+        "public_implementations": "DScribe and qmmlpack",
+        "reproduction_code": "github.com/hhaoyan/mbtr",
+        "identified_scaling_issue": "large N_e^k by N_x matrices for systems with many element species",
+        "suggested_scaling_remedies": "sparse matrix formats, on-the-fly distance/inner-product calculations, local-environment MBTR variants"
+      },
+      "observation": "The authors concluded that MBTR is a fast, general representation for interpolation between quantum-mechanical calculations, while noting that whole-system MBTR may degrade with increasing atom number and that local environment representations become appealing for larger systems.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Empirical benchmarking with kernel ridge regression, Gaussian/linear kernels, sGDML force learning, and active-learning convex-hull recovery on public quantum-chemistry and materials datasets; metrics were held-out MAE/RMSE for energies, polarizabilities, forces, formation energies, and percentage of avoided DFT calculations while preserving the correct convex hull.",
+    "metrics": {
+      "QM7b_atomization_energy_MAE_MBTR_Gaussian": {
+        "value": "0.60",
+        "unit": "kcal/mol",
+        "interpretation": "Held-out atomization-energy MAE for 5k training and 2k test molecules; below the 1 kcal/mol chemical-accuracy target"
+      },
+      "QM7b_atomization_energy_RMSE_MBTR_Gaussian": {
+        "value": "0.97",
+        "unit": "kcal/mol",
+        "interpretation": "Held-out atomization-energy RMSE for the same molecular benchmark"
+      },
+      "QM7b_polarizability_MAE_MBTR_Gaussian": {
+        "value": "0.04",
+        "unit": "Å^3",
+        "interpretation": "Held-out isotropic-polarizability MAE, competitive with or better than listed baselines"
+      },
+      "ABC2D6_elpasolite_formation_energy_RMSE": {
+        "value": "8.1",
+        "unit": "meV/atom",
+        "interpretation": "Formation-energy prediction error for 2,272 held-out elpasolite crystals after training on 9,086 crystals"
+      },
+      "ABC2D6_elpasolite_formation_energy_MAE": {
+        "value": "4.7",
+        "unit": "meV/atom",
+        "interpretation": "Mean absolute formation-energy error for the same periodic-crystal benchmark"
+      },
+      "ABC2_ternary_formation_energy_RMSE": {
+        "value": "31",
+        "unit": "meV/atom",
+        "interpretation": "Formation-energy RMSE for the chemically broader 4,611-structure ABC2 ternary dataset with 22 elements"
+      },
+      "MD17_sGDML_MBTR_best_reported_force_MAE": {
+        "value": "0.09",
+        "unit": "kcal/mol/Å",
+        "interpretation": "Lowest listed sGDML/MBTR force MAE among the MD17 molecules, for naphthalene with 1k force-training references"
+      },
+      "sGDML_MBTR_relative_error_reduction": {
+        "value": "50-60",
+        "unit": "%",
+        "interpretation": "Maximum reported MAE reduction of sGDML/MBTR over sGDML/CM_md in learning curves, especially for fewer than 100 training samples"
+      },
+      "AgPt_DFT_calculations_saved": {
+        "value": "48",
+        "unit": "%",
+        "interpretation": "Fraction of AgPt DFT calculations avoided by the active-learning phase-diagram workflow while still identifying the correct convex hull"
+      },
+      "AgPt_predicted_structure_MAE": {
+        "value": "39",
+        "unit": "meV/atom",
+        "interpretation": "MAE for energies of 331 AgPt structures predicted rather than selected for DFT training"
+      }
+    },
+    "final_verdict": "The original goal was met. MBTR achieved sub-chemical-accuracy molecular atomization-energy prediction, meV/atom-scale formation-energy prediction for periodic crystals, competitive MD17 energy and force prediction when coupled to KRR or sGDML, and successful active-learning recovery of an alloy convex hull while saving up to 48% of DFT calculations in the AgPt example. The results support MBTR as a unified representation for both molecules and crystals, though with noted scaling and locality limitations for very large systems or many element species."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 1,
+      "what_failed": "Existing CM and BoB representations did not satisfy all desired representation criteria.",
+      "diagnosis": "CM diagonalization loses information and sorting introduces discontinuities; BoB avoids atom-order dependence but cannot distinguish homometric molecules and has discontinuous derivatives; atomic-number encodings overly decorrelate chemically related elements.",
+      "correction": "The authors designed MBTR to retain element stratification while replacing sorted lists by broadened continuous distributions of many-body geometric terms."
+    },
+    {
+      "step_index_ref": 3,
+      "what_failed": "A naive periodic extension of the molecular MBTR sum would diverge for crystals.",
+      "diagnosis": "Periodic systems have infinitely many translated unit-cell images, so summing over all atoms gives N_a = infinity and an infinite many-body sum.",
+      "correction": "They required one atom index in each tuple to be in the primitive unit cell and used decaying weighting functions to ensure convergence and avoid double counting."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Prediction errors increased for the chemically broader ABC2 ternary alloy dataset compared with the elpasolite dataset.",
+      "diagnosis": "Adding chemical elements increases the intrinsic dimensionality of the learning problem; the ABC2 dataset contained 22 elements rather than the 12-element elpasolite setting.",
+      "correction": "The authors treated this as an expected diagnostic result and quantified the degradation: RMSE/MAE increased to 31/23 meV/atom for ABC2 ternaries compared with 23/15 meV/atom for an elpasolite model of the same training size."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Energy-only machine-learning potentials can yield inaccurate forces when differentiated.",
+      "diagnosis": "Differentiating energy-based ML models can introduce errors from small oscillations between training samples due to insufficient regularization and from insufficient model constraints in directions not covered by the training data.",
+      "correction": "The authors used reference forces directly by embedding MBTR in sGDML, which trains on forces with a symmetrized Matern kernel and provides energy and force predictions."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Direct ML models on small binary-alloy datasets produced energy errors large enough to lead to wrong convex hulls.",
+      "diagnosis": "Each alloy dataset contained at most a few hundred structures, which was too little data for direct application of ML models to reliably rank low-energy phases.",
+      "correction": "The authors introduced an active-learning loop that selectively requested DFT energies for structures predicted to be low in energy and allowed the energy threshold to control the trade-off between saved calculations and convex-hull failure probability."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Whole-system MBTR can become less practical for very large systems or many chemical elements.",
+      "diagnosis": "Discretized MBTR matrices grow with element-tensor size N_e^k by N_x, requiring substantial memory for many element species; whole-molecule/crystal representations may degrade as atom count and degrees of freedom increase.",
+      "correction": "The authors suggested sparse matrix formats, on-the-fly distance and inner-product calculations, and local-environment MBTR variants for larger systems."
+    }
+  ]
+}

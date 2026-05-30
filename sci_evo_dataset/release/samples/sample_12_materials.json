@@ -1,0 +1,316 @@
+{
+  "paper_id": "paper:a_critical_examination_of_compound_stability_predictions_fro:2020",
+  "title": "A critical examination of compound stability predictions from machine-learned formation energies",
+  "year": 2020,
+  "domain": "materials",
+  "venue": "npj Computational Materials",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/16501_973cfdc47aef3f9bdd6e39651f48acbbaeaadd94/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "Assess whether machine-learned formation enthalpy models can make reliable thermodynamic stability predictions for inorganic crystalline compounds",
+    "input_data": "Materials Project entries queried on July 26, 2019: 85,014 unique non-elemental chemical formulas, using the lowest-energy structure and MP-corrected formation energy per atom for each formula. Models examined were six compositional models, ElFrac, Meredig, Magpie, AutoMat, ElemNet, and Roost, plus the structural CGCNN model. Sparse-space tests used 267 excluded quaternary Li-Mn-TM-O compounds with TM ∈ {Ti, V, Cr, Fe, Co, Ni, Cu}, containing 9 MP-stable and 258 MP-unstable compounds, and an expanded set of 13,659 candidates including 13,392 additional charge- and electronegativity-rule-generated compositions.",
+    "user_intent": "Formation energy ML models had been claimed to approach DFT accuracy, but materials discovery requires identifying compounds stable on the convex hull. The authors wanted to test whether accurate absolute formation enthalpy predictions imply accurate relative stability predictions, especially in sparse chemical spaces resembling new-materials discovery.",
+    "quantifiable_goal": "Evaluate whether ML-predicted ΔHf can yield ΔHd and stable/unstable classifications comparable to DFT stability usefulness: DFT ΔHd errors can be as low as approximately 0.04 eV/atom for many decomposition reactions, while the target discovery task requires recovering the 9 stable Li-Mn-TM-O compounds with few false positives among 267 MP compounds and 13,659 expanded candidates."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Thermodynamic stability is governed by decomposition enthalpy, ΔHd, obtained from a convex hull in formation enthalpy-composition space, not by absolute formation enthalpy ΔHf alone. [Gap] The relationship between ΔHf and ΔHd across a large materials database had to be quantified before testing ML models. [Decision] Query Materials Project and construct convex hulls from MP formation energies to define the DFT-reference ΔHd labels.",
+      "action": "analysis",
+      "tool": {
+        "name": "Materials Project API and convex hull construction",
+        "version": ""
+      },
+      "parameters": {
+        "query_date": "2019-07-26",
+        "dataset_size": "85,014 unique non-elemental chemical formulas",
+        "structure_selection": "most negative formation energy per formula, i.e. MP ground-state structure",
+        "stability_definition": "stable if ΔHd ≤ 0 eV/atom; unstable if ΔHd > 0 eV/atom"
+      },
+      "observation": "Across 85,014 MP ground-state entries, ΔHf had mean ± average absolute deviation of -1.42 ± 0.95 eV/atom, whereas ΔHd was much smaller at 0.06 ± 0.12 eV/atom. Effectively no linear correlation existed between ΔHf and ΔHd except the trivial single-compound chemical spaces, which comprised about 3% of materials.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Many published models predict ΔHf from composition alone, and such models are attractive for discovery because crystal structure is usually unknown for a new composition. [Gap] Their ΔHf accuracy needed to be benchmarked on the same MP dataset before evaluating stability. [Decision] Train six compositional models on ΔHf using cross-validation and compare predicted ΔHf to MP ΔHf.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "ElFrac, Meredig, Magpie, AutoMat, ElemNet, and Roost compositional models",
+        "version": ""
+      },
+      "parameters": {
+        "cross_validation": "five-fold cross-validation",
+        "ElFrac_Meredig_Magpie_training": "matminer representations with XGBoost, 200 trees, maximum depth 5",
+        "AutoMat_training": "AutoMat as implemented in Ref. 22",
+        "ElemNet_training": "Keras implementation, Adam optimizer, initial learning rate 1e-4, 200 epochs, 10% validation split, best-validation-loss weights",
+        "Roost_training": "500 epochs, Adam optimizer, initial learning rate 5e-4, L1 loss"
+      },
+      "observation": "All five published compositional representations substantially improved over the stoichiometric ElFrac baseline for ΔHf prediction, decreasing MAE by 27-74%. For most models, ΔHf MAE was comparable to expected DFT-experiment disagreement for formation energies, approximately 0.1-0.2 eV/atom.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Stability depends on relative formation energies within chemical spaces, and DFT often benefits from systematic error cancellation for ΔHd. [Gap] It was unknown whether ML-predicted ΔHf errors would cancel when convex hulls were reconstructed. [Decision] Use each model's cross-validated ΔHf predictions to rebuild convex hulls and derive ML-predicted ΔHd.",
+      "action": "analysis",
+      "tool": {
+        "name": "Convex hull stability analysis using ML-predicted ΔHf",
+        "version": ""
+      },
+      "parameters": {
+        "input_energies": "cross-validated ΔHf,pred for 85,014 MP compositions",
+        "reference_energies": "MP ΔHf and MP-derived ΔHd",
+        "output": "ΔHd,pred for each model"
+      },
+      "observation": "The MAE for ΔHd was almost identical to the MAE for ΔHf, showing very little ML error cancellation. Four of the five published compositional models, all except Roost, only negligibly improved over ElFrac for ΔHd, with MAE of approximately 0.10-0.14 eV/atom. Roost improved relative to the other compositional models but still showed strong disagreement near ΔHd,pred = 0 and ΔHd,MP = 0.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Materials discovery requires classification of candidates as stable or unstable, not merely low average regression error. [Gap] Regression MAE could hide high rates of false stable predictions. [Decision] Classify each compound using the threshold ΔHd ≤ 0 and compute accuracy, F1 score, and false positive rate for the compositional models.",
+      "action": "analysis",
+      "tool": {
+        "name": "Stable/unstable classification from ΔHd,pred",
+        "version": ""
+      },
+      "parameters": {
+        "classification_threshold": "ΔHd = 0 eV/atom",
+        "naive_baseline": "predict every compound as unstable",
+        "MP_unstable_fraction": "60%",
+        "histogram_bin_width": "5 meV/atom",
+        "moving_accuracy_window": "20 meV/atom"
+      },
+      "observation": "Because 60% of MP compounds were unstable, a naive all-unstable classifier would reach 60% accuracy. Five of six compositional models, all except Roost, had only marginal accuracy of 58-65%. Roost reached 76% accuracy. Across compositional models, false positive rates were high at 25-38%, meaning many compounds predicted stable were unstable by MP.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] The full MP dataset is biased toward known materials and contains many stable compounds, unlike realistic discovery spaces. [Gap] A more stringent test was needed in a sparse chemical space with few stable compounds. [Decision] Exclude all Li-Mn-TM-O quaternary compounds from training, retrain each compositional model on the remaining MP entries, then test whether the models recover the excluded stable compounds.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Leave-chemical-space-out Li-Mn-TM-O benchmark",
+        "version": ""
+      },
+      "parameters": {
+        "excluded_space": "Li-Mn-TM-O, TM ∈ {Ti, V, Cr, Fe, Co, Ni, Cu}",
+        "excluded_compounds": "267 quaternary compounds",
+        "excluded_stable_compounds": "9 MP-stable compounds",
+        "excluded_unstable_compounds": "258 MP-unstable compounds",
+        "training_set_size": "84,747 MP compounds",
+        "training_target": "ΔHf"
+      },
+      "observation": "Although ΔHf predictions for the excluded Li-Mn-TM-O subset were more accurate than on the full dataset, ΔHd-based stability prediction was poor. No compositional model correctly detected more than 3 of the 9 stable compounds. AutoMat had the most true positives by this metric, with 3 true positives accompanied by 24 false positives.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Even the 267 MP compounds are biased toward compositions already considered plausible or stable. [Gap] New-materials discovery would screen a much larger hypothetical composition space, where false positives can dominate. [Decision] Expand the Li-Mn-TM-O candidate set using charge- and electronegativity-based rules and evaluate model-predicted stability across all candidates.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Davies-rule expanded quaternary composition generation and ML stability screening",
+        "version": ""
+      },
+      "parameters": {
+        "additional_generated_compounds": "13,392",
+        "total_candidate_compounds": "13,659",
+        "known_MP_stable_compounds_in_candidates": "9",
+        "models": "ElFrac, Meredig, Magpie, AutoMat, ElemNet, Roost trained on MP minus 267 Li-Mn-TM-O compounds"
+      },
+      "observation": "Each compositional model predicted about 3.7-5.0% of the 13,659 candidates to be stable: ElFrac 685, Meredig 528, Magpie 619, AutoMat 541, ElemNet 556, and Roost 507. Only 1 of 9 MP-stable compounds was recovered by ElFrac, Meredig, Magpie, AutoMat, and Roost; ElemNet recovered 2 of 9. Across models, 139 compounds were predicted stable by all six models and 1,372 unique compounds were predicted stable by at least one model.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] One possible workaround is to train directly on ΔHd or on stable/unstable labels instead of predicting ΔHf first. [Gap] Direct ΔHd learning is physically nonlocal because ΔHd depends on all competing phases in a chemical space, but its empirical performance had to be tested. [Decision] Retrain compositional representations directly on ΔHd and also test classifier versions for stable/unstable prediction.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Direct ΔHd regression and stable/unstable classification",
+        "version": ""
+      },
+      "parameters": {
+        "direct_regression_target": "ΔHd",
+        "classification_target": "stable if ΔHd ≤ 0; unstable if ΔHd > 0",
+        "classifier_models": "ElFrac, Meredig, Magpie, AutoMat using XGBoost classifier; ElemNet with sigmoid output and cross entropy loss; Roost excluded from classifier analysis",
+        "Li_Mn_TM_O_test_size": "267 compounds"
+      },
+      "observation": "Direct ΔHd training did not solve the sparse-space problem. On the 267 excluded Li-Mn-TM-O compounds, every model predicted all compounds to be unstable and identified 0 of the 9 MP-stable compounds. For all models except Roost and ElemNet, all 267 predictions fell in the narrow range 0.040 eV/atom < ΔHd,pred < 0.082 eV/atom. On the 13,659-candidate expanded space, direct ΔHd models recovered 0 of 9 MP-stable compounds; ElFrac, Meredig, Magpie, and AutoMat predicted 0 stable candidates, ElemNet predicted 58, and Roost predicted 299. Classifier models were only slightly better overall, with accuracies below 80%, F1 scores below 0.75, and false positive rates above 0.15.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Compositional models omit crystal structure, but structure-sensitive models may distinguish polymorph energetics and local environments relevant to stability. [Gap] The magnitude of improvement from adding structure needed to be tested on the same stability tasks. [Decision] Train the structural CGCNN model on ΔHf and repeat the ΔHf, convex-hull ΔHd, stability classification, and Li-Mn-TM-O sparse-space analyses.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Crystal Graph Convolutional Neural Network",
+        "version": ""
+      },
+      "parameters": {
+        "cross_validation": "nested five-fold cross-validation",
+        "training_validation_test_ratio": "60% training, 20% validation, 20% test for full MP dataset",
+        "optimization_target": "mean squared error on ΔHf",
+        "epochs": "1000",
+        "model_selection": "best validation MAE",
+        "Li_Mn_TM_O_protocol": "train on remaining compounds with five validation folds and average predictions from five CGCNN models for the 267 test compounds"
+      },
+      "observation": "CGCNN substantially improved ΔHf and derived ΔHd predictions, reducing MAE by about 50% relative to the best compositional model, Roost. The spurious vertical and horizontal disagreement features near ΔHd = 0 seen for compositional models were absent. CGCNN reached 80% stable/unstable classification accuracy and, in the excluded Li-Mn-TM-O benchmark, recovered 5 of the 9 stable compounds with only 6 false positives. The authors noted that this improvement comes with the constraint that a new composition's ground-state structure is generally not known a priori.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] The results showed a mismatch between formation-energy regression success and stability-screening utility. [Gap] Future ML formation-energy models need benchmarks that test discovery-like stability prediction rather than only ΔHf parity. [Decision] Release the stability-analysis tests, data, and code so future models can be evaluated on the same closed-loop criteria.",
+      "action": "reflection",
+      "tool": {
+        "name": "TestStabilityML public repository",
+        "version": ""
+      },
+      "parameters": {
+        "repository_url": "https://github.com/CJBartel/TestStabilityML",
+        "released_items": "training code for compositional models, stability assessment code from predicted formation energies, formation and decomposition energy data, and figure/table generation code"
+      },
+      "observation": "The paper provided a public benchmark workflow for assessing whether new ML formation-energy models are viable inputs for compound stability prediction and materials discovery.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors validated their claim by cross-validated ΔHf prediction on 85,014 MP compositions, convex-hull reconstruction to compute ΔHd,pred, stable/unstable classification at ΔHd = 0, leave-chemical-space-out Li-Mn-TM-O sparse-space testing, expanded 13,659-candidate screening, direct ΔHd regression/classification controls, and comparison to a structural CGCNN model.",
+    "metrics": {
+      "MP_dataset_size": {
+        "value": "85014",
+        "unit": "compounds",
+        "interpretation": "Number of unique non-elemental MP chemical formulas used for the main benchmark."
+      },
+      "MP_Delta_Hf_distribution": {
+        "value": "-1.42 ± 0.95",
+        "unit": "eV/atom",
+        "interpretation": "Mean ± average absolute deviation of MP formation enthalpies; much broader than ΔHd."
+      },
+      "MP_Delta_Hd_distribution": {
+        "value": "0.06 ± 0.12",
+        "unit": "eV/atom",
+        "interpretation": "Mean ± average absolute deviation of decomposition enthalpies, showing that stability is a subtler energy scale than formation enthalpy."
+      },
+      "published_compositional_Delta_Hf_MAE_improvement_over_ElFrac": {
+        "value": "27-74",
+        "unit": "%",
+        "interpretation": "Published compositional representations predicted formation enthalpy substantially better than the stoichiometric baseline."
+      },
+      "compositional_Delta_Hd_MAE_except_Roost": {
+        "value": "0.10-0.14",
+        "unit": "eV/atom",
+        "interpretation": "Typical decomposition-enthalpy error for most compositional models, much larger than DFT-like useful stability error."
+      },
+      "DFT_Delta_Hd_reference_error": {
+        "value": "0.04",
+        "unit": "eV/atom",
+        "interpretation": "Reported scale of DFT ΔHd MAE for a substantial fraction of decomposition reactions, enabled by systematic error cancellation."
+      },
+      "naive_all_unstable_accuracy": {
+        "value": "60",
+        "unit": "%",
+        "interpretation": "Baseline classification accuracy because 60% of MP entries are unstable."
+      },
+      "compositional_model_accuracy_range_except_Roost": {
+        "value": "58-65",
+        "unit": "%",
+        "interpretation": "Most compositional models only marginally improved on, or even underperformed, the naive all-unstable classifier."
+      },
+      "Roost_stability_classification_accuracy": {
+        "value": "76",
+        "unit": "%",
+        "interpretation": "Best compositional-model stable/unstable classification accuracy on the full MP benchmark."
+      },
+      "compositional_false_positive_rate_range": {
+        "value": "25-38",
+        "unit": "%",
+        "interpretation": "High fraction of compounds predicted stable by compositional models that were not stable by MP."
+      },
+      "Li_Mn_TM_O_best_compositional_recovery": {
+        "value": "3/9",
+        "unit": "stable compounds",
+        "interpretation": "Best recovery of MP-stable compounds among the 267 excluded Li-Mn-TM-O compounds; achieved by AutoMat with 24 false positives."
+      },
+      "expanded_space_candidate_count": {
+        "value": "13659",
+        "unit": "candidate compounds",
+        "interpretation": "Size of expanded Li-Mn-TM-O candidate screening set."
+      },
+      "expanded_space_compositional_predicted_stable_range": {
+        "value": "507-685",
+        "unit": "compounds",
+        "interpretation": "Number of candidates predicted stable by each ΔHf-trained compositional model in the expanded space."
+      },
+      "expanded_space_max_true_stable_recovery": {
+        "value": "2/9",
+        "unit": "stable compounds",
+        "interpretation": "Maximum number of MP-stable compounds recovered in the expanded screen; achieved by ElemNet."
+      },
+      "direct_Delta_Hd_sparse_recovery": {
+        "value": "0/9",
+        "unit": "stable compounds",
+        "interpretation": "Direct ΔHd-trained compositional models failed to identify any stable Li-Mn-TM-O compounds."
+      },
+      "CGCNN_classification_accuracy": {
+        "value": "80",
+        "unit": "%",
+        "interpretation": "Structural CGCNN stable/unstable classification accuracy on the MP stability benchmark."
+      },
+      "CGCNN_sparse_recovery": {
+        "value": "5/9",
+        "unit": "stable compounds",
+        "interpretation": "CGCNN recovered more than half of the MP-stable Li-Mn-TM-O compounds."
+      },
+      "CGCNN_sparse_false_positives": {
+        "value": "6",
+        "unit": "compounds",
+        "interpretation": "Number of unstable Li-Mn-TM-O compounds incorrectly predicted stable by CGCNN in the 267-compound sparse benchmark."
+      }
+    },
+    "final_verdict": "The study met its assessment goal by showing that accurate ML formation enthalpies do not imply accurate stability predictions. Compositional models could learn ΔHf reasonably well, but their ΔHd errors remained around 0.10-0.14 eV/atom for most models, their full-dataset false positive rates were 25-38%, and they performed poorly in sparse Li-Mn-TM-O discovery tests. Directly training on ΔHd or stable/unstable labels did not fix the problem. The structural CGCNN model performed much better, recovering 5 of 9 stable sparse-space compounds with 6 false positives, but it requires crystal structure information that is usually unavailable for new compositions."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "ML-predicted formation enthalpies did not yield accurate decomposition enthalpies after convex hull reconstruction.",
+      "diagnosis": "Unlike DFT, the compositional ML models did not benefit from systematic cancellation of errors when comparing chemically related compounds. ΔHd is typically 1-2 orders of magnitude smaller than ΔHf, so ΔHf-scale errors obscure stability.",
+      "correction": "The authors evaluated stability-specific metrics instead of relying on ΔHf MAE and proposed convex-hull ΔHd tests for future models."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "Compositional models produced high false positive rates for stable/unstable classification.",
+      "diagnosis": "The models learned broad formation-energy trends but generally could not distinguish stable and unstable compounds near the convex hull; MP's high stable fraction also underestimates false positives expected in real discovery spaces.",
+      "correction": "The authors analyzed F1 score, false positive rate, ROC behavior under different stability thresholds, and emphasized false-positive control as a required discovery metric."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Compositional models failed to recover most stable compounds in the sparse Li-Mn-TM-O leave-out benchmark.",
+      "diagnosis": "Even when ΔHf predictions were relatively accurate for transition-metal lithium oxides, the models could not resolve subtle relative stability within the chemical space.",
+      "correction": "The authors expanded the benchmark to more realistic candidate spaces and compared against a structural model."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Expanded-space screening produced hundreds of predicted stable candidates but recovered at most 2 of the 9 MP-stable compounds.",
+      "diagnosis": "In a larger hypothetical composition space, even modest false positive rates create many unstable candidates, overwhelming the discovery process.",
+      "correction": "The authors argued that these compositional formation-energy models cannot efficiently accelerate new-compound discovery without additional filtering or more capable representations."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Training directly on ΔHd or stable/unstable labels did not improve sparse-space stability discovery.",
+      "diagnosis": "ΔHd is not an intrinsic local property of a compound; it depends on competing compounds and on phase-diagram completeness. Direct ΔHd models tended to learn that similar compounds lie near the hull without distinguishing which are actually stable.",
+      "correction": "The authors retained ΔHf-based convex-hull testing as the physically motivated route and noted that direct ΔHd prediction is difficult to motivate physically."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "The best-performing structural approach is not directly applicable to arbitrary new compositions without known structures.",
+      "diagnosis": "CGCNN requires both composition and crystal structure as input, whereas in composition-first materials discovery the ground-state structure is generally not known a priori.",
+      "correction": "The authors presented CGCNN as evidence that structural information yields non-incremental improvement, while noting the need for structure prediction or other ways to supply plausible structures for new compositions."
+    }
+  ]
+}

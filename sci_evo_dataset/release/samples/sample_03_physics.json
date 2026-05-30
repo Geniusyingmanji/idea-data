@@ -1,0 +1,327 @@
+{
+  "paper_id": "paper:tokeye_fast_signal_extraction_for_fluctuating_time_series_vi:2026",
+  "title": "TokEye: Fast Signal Extraction for Fluctuating Time Series via Offline Self-Supervised Learning From Fusion Diagnostics to Bioacoustics",
+  "year": 2026,
+  "domain": "physics",
+  "venue": "arXiv.org",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/17838_518a1c4c698e984ee073d1eb635c54d2361f4793/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "TokEye, a fast self-supervised time-frequency signal extraction pipeline and U-Net surrogate for coherent, quasi-coherent, transient, and broadband mode identification in fluctuating tokamak diagnostics and related spectrograms",
+    "input_data": "Multichannel fluctuation time series from DIII-D diagnostics including electron cyclotron emission (ECE), CO2 interferometers, Magnetics High Resolution (MHR), and beam emission spectroscopy (BES); all diagnostic signals were resampled to 500 kHz and transformed to 0-250 kHz spectrograms using STFT with a Hann window of N=1024 and 87.5% overlap. The automated pipeline produced about 40,000 segmented spectrogram fragments. External validation used expert-labeled TJ-II ECE spectrograms and DCLDE 2011 odontocete passive-acoustic spectrograms.",
+    "user_intent": "Prior fusion mode-identification workflows relied on manual post-processing, diagnostic-specific filterbanks, explicit labels, simulation-biased training sets, or computationally expensive algorithms. The authors wanted a sensor-agnostic, labels-free method that could separate faint coherent modes from broadband turbulence and stochastic noise while scaling to ITER-like petabyte-per-day data volumes and enabling real-time or inter-shot plasma monitoring.",
+    "quantifiable_goal": "Extract coherent/transient time-frequency events over the 0-250 kHz diagnostic band with inference fast enough for active plasma monitoring, reported as approximately 0.5 s per full shot on GPU, while retaining useful zero-shot generalization to other devices and domains measured by recall on expert-labeled TJ-II and DCLDE spectrograms."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Fusion diagnostics contain superposed tearing modes, Alfvén eigenmodes, ELMs, broadband turbulence, injections, antenna scans, thermal fluctuations, and stochastic electronics or thermal noise. [Gap] There was no single formal taxonomy in the paper's target setting for deciding which structures should be separated before denoising. [Decision] Define a signals-first taxonomy so that processing operations could be matched to physical signal classes rather than to individual diagnostics.",
+      "action": "design",
+      "tool": {
+        "name": "Signals-first taxonomy for nonstationary time series",
+        "version": ""
+      },
+      "parameters": {
+        "main_categories": "coherent measurements, broadband measurements, stochastic noise",
+        "subcategories": "coherent, quasi-coherent, transient, broad, stochastic",
+        "frequency_range_of_interest": "0-250 kHz"
+      },
+      "observation": "The authors grouped coherent and quasi-coherent modes as localized time-frequency signatures, transient and broad events as broadband measurements, and stochastic measurements as noise. This led to the processing order: first isolate broadband components, then denoise coherent components, then segment candidate events.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Wavelet and multitaper methods can be useful but may reduce interpretability or linearly remove faint coherent modes. STFT is computationally efficient and compatible with existing fusion workflows such as MODESPEC. [Gap] A reproducible, diagnostic-agnostic time-frequency representation was needed before applying the self-supervised extraction methods. [Decision] Standardize all diagnostics with resampling and STFT settings implemented through the fusion ML data infrastructure.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "FAITH with STFT preprocessing",
+        "version": ""
+      },
+      "parameters": {
+        "resampling_rate": "500 kHz",
+        "decimation_filter": "8th-order Chebyshev Type I with phase preservation",
+        "window": "Hann",
+        "stft_window_length": "N=1024 samples",
+        "overlap": "87.5%",
+        "spectrogram_band": "0-250 kHz"
+      },
+      "observation": "The pipeline converted the diagnostic time series into complex STFT representations with real, imaginary, and log-power components. The authors decomposed each spectrogram into coherent observations M(t,f), broadband observations V(t,f), and stochastic noise eta(t,f).",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Diagnostics such as CO2 and ECE can be dominated by strong low-frequency broadband structure following an inverse-power-law-like cascade, which hides faint coherent modes. Simple DC clipping or low-frequency removal up to values such as 40 kHz can discard real low-frequency modes. [Gap] The pipeline needed to remove broadband baseline structure without destroying sharp coherent features. [Decision] Fit and subtract a smooth asymmetric baseline in the spectrogram, with pre-emphasis to reduce low-frequency edge artifacts.",
+      "action": "analysis",
+      "tool": {
+        "name": "Asymmetric least-squares baseline correction with pre-emphasis",
+        "version": ""
+      },
+      "parameters": {
+        "asymmetric_weight_p": "0.001",
+        "smoothness_lambda": "1e6",
+        "regularization": "second-order derivative smoothness on V(t,f)",
+        "pre_emphasis_alpha": "1",
+        "edge_effect_extent_observed": "up to 4 kHz on 250 kHz spectra"
+      },
+      "observation": "Subtracting the estimated broadband baseline flattened or whitened the spectrogram so that coherent mode structures remained more visible against stochastic noise. The authors showed this on ECE shot 178631, where raw spectra with low-frequency bias became baseline-corrected spectra in which faint Alfvén-eigenmode-like structures were less obscured.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] After baseline whitening, the coherent spectrogram C(f,t)=M(f,t)+eta(f,t) still contains stochastic white noise. Classical cross-power spectra cancel incoherent noise but behave as blind linear filters and can suppress transient events by averaging. [Gap] The authors needed nonlinear multichannel denoising that preserved faint nonstationary structures without manual clean labels. [Decision] Train a U-Net self-supervised channel-prediction model on complex STFT components, using other channels to reconstruct the target channel so independent noise averages out in the learned conditional expectation.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "U-Net multichannel self-supervised denoiser",
+        "version": ""
+      },
+      "parameters": {
+        "input_channels": "2k real/imaginary STFT channels from k input signals",
+        "output_channels": "2 real/imaginary channels for target signal X_N",
+        "loss": "mean absolute error (L1/MAE)",
+        "precision": "BF-16",
+        "stopping_proxy": "total variation criterion",
+        "prediction_mode": "independent Re(X) and Im(X) prediction"
+      },
+      "observation": "The trained network learned nonlinear cross-channel relationships analogous to cross-spectrum coherence and suppressed stochastic noise while preserving coherent structures. The authors reported that applying denoising directly to real spectra or jointly denoising phase-like quantities gave worse results or spectral artifacts, so they retained separate complex-component prediction.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Once denoised, physical events still had to be separated from background. Standard Otsu thresholding assumes a bimodal image histogram, while fusion spectrograms have sparse high-intensity events and dense low-intensity background. [Gap] The authors needed a mostly parameter-free thresholding method that could work across diagnostics without absolute intensity tuning. [Decision] Treat event extraction as anomaly detection and select the knee point of the spectrogram intensity cumulative distribution function.",
+      "action": "analysis",
+      "tool": {
+        "name": "CDF knee-point spectrogram thresholding",
+        "version": ""
+      },
+      "parameters": {
+        "preprocessing": "set all values below spectrogram mean to the mean",
+        "cdf_normalization": "normalize CDF and interpolate x/y axes equally",
+        "threshold_rule": "maximum distance from CDF curve to line connecting endpoints",
+        "interpolation_detail": "only tunable parameter"
+      },
+      "observation": "The method produced binary masks for coherent and transient candidate regions from denoised spectra. The authors illustrated the procedure with an original denoised spectrum, its CDF knee threshold, and the resulting thresholded spectrum.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Automated segmentation generated high-quality candidate masks, but channel-wise prediction can miss information present only in a single channel. [Gap] False negatives and edge cases needed correction before using the masks as a training database. [Decision] Add a robust label-expansion stage using single-channel U-Net segmentation with noisy-label-resistant loss and augmentations.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "U-Net label refinement with symmetric BCE",
+        "version": ""
+      },
+      "parameters": {
+        "validation_scheme": "5-fold randomized single-channel measurements",
+        "loss": "symmetric binary cross-entropy",
+        "augmentations": "flips and elastic deformation",
+        "entropy_use": "subset of high-entropy measurements added to predicted signal",
+        "resulting_database_size": "about 40,000 spectrogram fragments"
+      },
+      "observation": "The refinement stage expanded the determined signal space and produced a database of segmented plasma events without manual labeling.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] The full self-supervised processing pipeline can create labels but is too involved for fastest real-time deployment. [Gap] A fast surrogate was needed to directly extract vertical/transient and coherent observations from new spectrograms. [Decision] Train a U-Net semantic segmentation surrogate on the processed coherent and transient labels with spectrogram-specific normalization, augmentation, and multi-scale STFT parameter sampling.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "U-Net surrogate semantic segmentation model",
+        "version": ""
+      },
+      "parameters": {
+        "augmentations": "SpecAug",
+        "normalization": "cumulative mean and standard deviation per diagnostic",
+        "robust_clipping": "0.1 and 99.9 percentiles",
+        "label_resampling": "bicubic resampled labels",
+        "window_size_range": "[256, 2048] samples",
+        "hop_size_range": "[64, 512] samples",
+        "output": "two-channel binary segmentation for coherent and transient portions"
+      },
+      "observation": "The surrogate learned to reproduce the pipeline's event masks and became the real-time extraction model. The authors noted that multi-period multi-scale training improved robustness because, without it, segmentations were highly sensitive to window size and overlap.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] The model needed to demonstrate utility on the DIII-D diagnostics from which the self-supervised database was built. [Gap] The authors had to show that the method extracted interpretable plasma events rather than only producing abstract masks. [Decision] Apply the surrogate and gated spectrogram analysis to representative MHR, CO2, and ECE shots and inspect extracted event regions and amplitudes.",
+      "action": "analysis",
+      "tool": {
+        "name": "TokEye surrogate inference and connected-region event extraction",
+        "version": ""
+      },
+      "parameters": {
+        "MHR_example_shot": "170008",
+        "CO2_example_shot": "185781",
+        "ECE_tearing_mode_shot": "199597",
+        "ECE_tearing_suppressed_shot": "199607",
+        "example_model_threshold": "model threshold; TJ-II recommendation later stated as 50%"
+      },
+      "observation": "On MHR shot 170008, the system produced clean coherent mode extraction and a database of detected regions; example rows included label 1 spanning 7-68 kHz and 183-4096 ms with amplitude 5335 dB, label 3 spanning 28-96 kHz and 376-2358 ms with amplitude 546 dB, and label 21 spanning 99-172 kHz and 1295-1796 ms with amplitude 42 dB. On CO2 shot 185781 it extracted both high- and low-frequency structures and fine chirping structures. On ECE shots 199597 and 199607 it showed high-frequency modes starting near 2 s; in the tearing-mode shot they diminished near 3.4 s when tearing occurred, while in the ECCD-suppressed shot they persisted.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] A sensor-agnostic method should generalize beyond DIII-D. [Gap] DIII-D-only success would not prove portability to other devices with different noise and event structures. [Decision] Deploy the trained model without retraining on expert-labeled ECE spectrograms from the TJ-II stellarator.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Zero-shot TokEye inference on TJ-II ECE spectrograms",
+        "version": ""
+      },
+      "parameters": {
+        "device": "TJ-II stellarator",
+        "diagnostic": "ECE",
+        "threshold": "50% recommended threshold",
+        "retraining": "none"
+      },
+      "observation": "The model obtained recall of 0.825 on expert-labeled TJ-II spectrograms. It also detected structures not annotated in the original labels and identified areas with no mode activity, but consistently measured a cutoff frequency around 100 kHz.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] The authors claimed the signals-first framework should extend beyond fusion because many scientific spectrograms contain localized time-frequency events amid broadband interference. [Gap] Cross-domain generalization had to be tested on a non-fusion benchmark. [Decision] Evaluate zero-shot inference on DCLDE 2011 odontocete passive-acoustic spectrograms with expert annotations.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Zero-shot TokEye inference on DCLDE 2011 odontocete spectrograms",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "DCLDE 2011 odontocete passive acoustics",
+        "species": "Delphinus capensis and Delphinus delphis",
+        "threshold": "50% recommended threshold",
+        "retraining": "none"
+      },
+      "observation": "The model achieved recall of 0.7708 on Delphinus capensis and 0.7953 on Delphinus delphis in a zero-shot setting. It generally localized dolphin-call regions, but precision was low because annotations were often one-pixel contours while the model marked wider regions; some cases had only three pixels of overlap despite being in the correct vicinity.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 11,
+      "thought": "[Background] The motivating application requires large-scale automated database generation and real-time or inter-shot analysis. [Gap] Accuracy alone was insufficient if processing and inference were too slow. [Decision] Measure throughput for database creation, surrogate training, and inference on GPU and CPU hardware.",
+      "action": "analysis",
+      "tool": {
+        "name": "Runtime benchmarking on Nvidia A100 GPU and 64-core Intel CPU",
+        "version": ""
+      },
+      "parameters": {
+        "input_format": "HDF5 dataset",
+        "database_size_benchmark": "5000 ready-for-training examples",
+        "gpu": "single Nvidia A100",
+        "cpu": "64-core Intel CPU",
+        "validation": "full 5-fold validation for high-quality surrogate"
+      },
+      "observation": "Creating a database of 5000 ready-for-training examples took roughly 5 hours on one Nvidia A100 GPU with a 64-core Intel CPU. Training a high-quality surrogate semantic segmentation model with full 5-fold validation took around 12 hours. Inference processed a full shot in approximately 0.5 s on GPU and roughly 5-10 s on CPU depending on the number of spectra processed in parallel.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The final claim was tested by applying the pipeline and surrogate to DIII-D diagnostic case studies, comparing zero-shot model outputs with expert annotations on TJ-II ECE spectrograms, comparing zero-shot outputs with DCLDE 2011 odontocete annotations, and benchmarking database-generation, training, and inference runtimes on GPU/CPU hardware.",
+    "metrics": {
+      "GPU_inference_latency_per_full_shot": {
+        "value": "0.5",
+        "unit": "s",
+        "interpretation": "Meets the stated fast-inference target for active plasma monitoring and inter-shot analysis on GPU."
+      },
+      "CPU_inference_latency_per_full_shot": {
+        "value": "5-10",
+        "unit": "s",
+        "interpretation": "Usable for offline or slower inter-shot processing, but significantly slower than GPU inference and identified as an area for future CPU optimization."
+      },
+      "TJ-II_zero_shot_recall": {
+        "value": "0.825",
+        "unit": "fraction",
+        "interpretation": "Strong generalization to expert-labeled ECE spectrograms from a different fusion device without retraining."
+      },
+      "DCLDE_Delphinus_capensis_zero_shot_recall": {
+        "value": "0.7708",
+        "unit": "fraction",
+        "interpretation": "Moderate-to-strong zero-shot localization of bioacoustic whistle contours despite a domain shift from fusion to marine acoustics."
+      },
+      "DCLDE_Delphinus_delphis_zero_shot_recall": {
+        "value": "0.7953",
+        "unit": "fraction",
+        "interpretation": "Moderate-to-strong zero-shot localization of a second dolphin species in the DCLDE benchmark."
+      },
+      "segmented_database_size": {
+        "value": "40000",
+        "unit": "spectrogram fragments",
+        "interpretation": "The self-supervised pipeline generated a large automatically labeled event database without manual labeling."
+      },
+      "database_creation_time_for_5000_examples": {
+        "value": "5",
+        "unit": "h",
+        "interpretation": "Time required to create 5000 ready-for-training examples from HDF5 data on one Nvidia A100 GPU plus 64-core Intel CPU."
+      },
+      "surrogate_training_time_with_5_fold_validation": {
+        "value": "12",
+        "unit": "h",
+        "interpretation": "Training cost for a high-quality surrogate semantic segmentation model with full 5-fold validation."
+      }
+    },
+    "final_verdict": "The original goal was largely met. TokEye produced an automated self-supervised event-extraction database, extracted interpretable coherent and transient structures from multiple DIII-D diagnostics, generalized zero-shot to TJ-II with 0.825 recall and to DCLDE bioacoustics with recalls near 0.77-0.80, and achieved the stated GPU inference latency of approximately 0.5 s per full shot. Remaining limitations include lower CPU speed, cutoff-frequency bias on TJ-II, low precision against one-pixel DCLDE annotations, and some missed or broadened detections in challenging spectrogram regions."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Baseline fitting produced strong edge effects on certain sensors.",
+      "diagnosis": "The broadband baseline-removal method was not perfect, and fitting error could propagate down the pipeline; the authors observed this effect extending to about 4 kHz on 250 kHz spectra.",
+      "correction": "They applied a pre-emphasis filter assuming a first-order inverse power law with alpha=1 before baseline fitting."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "Standard single-image blind-spot denoising did not provide sufficiently good spectrogram denoising.",
+      "diagnosis": "Blind-spot methods assume pixel-wise independence, but sparse nonlinear spectra contain correlations across the time-frequency plane. AP-BSN or ATBSN-style variable-kernel tests reduced noise but either retained observable correlated noise or removed adjacent fluctuation signals, especially with larger kernels.",
+      "correction": "The authors used multichannel self-supervised channel prediction on complex STFT real and imaginary components instead of single-image autocorrelation-based denoising."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "The self-supervised denoiser could learn residual noise after long training with many parameters.",
+      "diagnosis": "The available channels are not infinite independent noisy realizations of the same signal, so the Noise2Noise-style assumption is only approximate.",
+      "correction": "They used a total-variation stopping criterion as a proxy for noise content to stop denoising before overfitting noise."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "CDF knee-point thresholding can select random background when no true signal exists.",
+      "diagnosis": "Knee-point detection requires a signal-bearing intensity distribution; if a spectrogram has no signal, the knee can fall on slightly higher random background values.",
+      "correction": "The authors noted that all spectrograms processed in the paper contained at least one mode; future use would need an additional no-signal check or post-processing."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Channel-wise self-supervised predictions could create false negatives.",
+      "diagnosis": "Information present only on one channel may be absent from other channels, so a model trained to predict a channel from other channels can fail to recover channel-unique signals.",
+      "correction": "They trained a single-channel U-Net refinement model with 5-fold randomization, symmetric BCE, flips, elastic deformation, and high-entropy label expansion."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Surrogate segmentations were highly sensitive to STFT window size and overlap.",
+      "diagnosis": "Training on a fixed spectrogram parameterization did not robustly cover parameter uncertainty across diagnostics and operating settings.",
+      "correction": "They used multi-period multi-scale surrogate training with bicubic-resampled labels, randomly sampling window sizes from 256 to 2048 and hop sizes from 64 to 512."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "The TJ-II zero-shot model consistently measured a cutoff frequency around 100 kHz.",
+      "diagnosis": "The authors described this as a manual bias rather than a physical generalization success.",
+      "correction": "They stated that it can be corrected in post-processing similarly to scan-line correction."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Bioacoustic precision was low and some dolphin-call overlaps were missed or small.",
+      "diagnosis": "DCLDE annotations were strongly localized to one-pixel contours, while the model marked wider regions; annotations could mark the far edge of a call while the model detected the center, creating both false negatives and false positives. The model also struggled when pitch rapidly dropped or annotations lay at the lowest frequency bins.",
+      "correction": "They avoided skeletonization because it could force convergence to a single pixel that might not overlap the annotation at all, and they suggested fine-tuning on the dataset for stronger alignment with benchmark goals."
+    },
+    {
+      "step_index_ref": 11,
+      "what_failed": "CPU inference on variable-size spectra was significantly slower than GPU inference.",
+      "diagnosis": "Although GPU surrogate extraction was fast, CPU processing of variable-size input spectra took roughly 5-10 s per full shot depending on parallel spectra.",
+      "correction": "The authors proposed future investigation of quantization and pruning for CPU deployment."
+    }
+  ]
+}

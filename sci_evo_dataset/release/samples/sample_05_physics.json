@@ -1,0 +1,334 @@
+{
+  "paper_id": "paper:the_matrix_element_method_and_qcd_radiation:2010",
+  "title": "The Matrix Element Method and QCD Radiation",
+  "year": 2010,
+  "domain": "physics",
+  "venue": "",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/16078_03527e5e7d2a2531fabbe63c2dbd95cf60233679/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "A practical extension of the Matrix Element Method (MEM) that accounts for initial-state QCD radiation in LHC events with invisible final-state particles, using transverse boost corrections, Sudakov reweighting, and ISR transfer functions.",
+    "input_data": "Existing MEM formalism with fixed-parton hard-process matrix elements; two benchmark processes pp -> t tbar -> b bbar l+ l- nu nubar and pp -> h -> W+ W- -> l+ l- nu nubar; simulated LHC events at sqrt(s)=14 TeV generated with Pythia 6.4 using CTEQ6L1 PDFs; 1000-event likelihood samples for top and Higgs studies; input masses m_t=175 GeV and m_h=180 GeV; matrix elements from CompHEP 4.4 and MadWeight/MadGraph/MadEvent; hadron-level samples passed through Pgs 4 with general LHC detector parameters; one million Pythia/Pgs events per m_t point used to determine the acceptance function; double-Gaussian jet-energy transfer functions tuned on Pythia/Pgs t tbar Monte Carlo.",
+    "user_intent": "The basic MEM only uses matrix elements with a fixed number of external partons and therefore cannot reliably analyze LHC events with abundant initial-state radiation. Vetoing extra jets removes a large fraction of signal events and still leaves ISR-induced kinematic biases, especially for processes with invisible particles and narrow s-channel resonances.",
+    "quantifiable_goal": "Recover the input masses m_t=175 GeV and m_h=180 GeV within statistical likelihood-fit uncertainties in 1000-event samples while treating ISR without severe extra-jet vetoes; avoid the >40% top-event loss from vetoing extra jets with p_T>40 GeV; keep the added MEM computation time below about a factor of 10 when using ISR transfer functions."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] The standard MEM evaluates an event likelihood from PDFs, the squared hard-process matrix element, total cross section normalization, acceptance, and transfer functions, integrating over invisible-particle momenta. [Gap] For the benchmark processes with two neutrinos, direct integration over neutrino momenta has sharp resonance structures and must be numerically stable before ISR corrections can be tested. [Decision] Implement two independent MEM calculations and map the integration variables to intermediate invariant masses so that Breit-Wigner resonances are flattened.",
+      "action": "design",
+      "tool": {
+        "name": "CompHEP-generated private MEM code and MadWeight/MadGraph/MadEvent",
+        "version": "CompHEP 4.4"
+      },
+      "parameters": {
+        "processes": "pp -> b bbar l+ l- nu nubar; pp -> h -> W+W- -> l+ l- nu nubar",
+        "integration_variables_ttbar": "four-dimensional integration after energy-momentum conservation, using top-quark and W-boson invariant masses instead of neutrino momentum components",
+        "Breit_Wigner_mapping": "t_k transformation over -pi/2 <= t_k <= pi/2"
+      },
+      "observation": "The two independent MEM implementations agreed very well for all results shown, providing a stable baseline likelihood calculation for the ISR studies.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] At the Tevatron, MEM analyses often used only events whose reconstructed jets exactly matched the hard matrix element, but LHC ISR is much more frequent. [Gap] The authors needed to quantify whether simply vetoing extra jets would be acceptable at the LHC. [Decision] Estimate the event loss from an extra-jet veto using Pythia and Pgs simulation for top-pair production at 14 TeV.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Pythia plus Pgs",
+        "version": "Pythia 6.4; Pgs 4"
+      },
+      "parameters": {
+        "collider_energy": "sqrt(s)=14 TeV",
+        "extra_jet_veto_threshold": "p_T>40 GeV",
+        "process": "top-quark pair production"
+      },
+      "observation": "A veto on extra jets with p_T>40 GeV reduced the number of top-pair events by more than 40%; about 27% of events had one additional jet above 40 GeV and about 15% had two or more extra jets.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Most extra jets originate from ISR, whose dominant effect is to give the hard final-state system transverse recoil. [Gap] Including explicit matrix elements with extra partons would raise the likelihood-fit computing intensity by more than one order of magnitude even for only one extra parton. [Decision] Design a lower-cost event-by-event kinematic correction by boosting the incoming partons of the hard matrix element by the summed transverse ISR momenta.",
+      "action": "design",
+      "tool": {
+        "name": "Transverse boost correction to incident parton momenta",
+        "version": ""
+      },
+      "parameters": {
+        "boost_direction": "transverse coordinates only",
+        "ISR_treatment": "sum ISR momenta for each incoming leg",
+        "matrix_element_parton_multiplicity": "hard process only, no additional final-state ISR partons"
+      },
+      "observation": "The correction restored transverse momentum balance without increasing MEM likelihood-fit computing time compared with the no-ISR treatment, but did not include the detailed QCD branching probabilities or propagator effects.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] A pure boost restores kinematics but ignores the probability for producing the observed ISR. [Gap] The authors needed to test whether ISR branching weights would reduce residual mass biases at parton level. [Decision] Add an approximate Sudakov reweighting based on one effective backward-evolution ISR branching per incoming leg, using the summed ISR transverse momentum.",
+      "action": "design",
+      "tool": {
+        "name": "ISR Sudakov reweighting with massless-quark splitting functions",
+        "version": ""
+      },
+      "parameters": {
+        "branching_model": "one effective branching j -> i + X per ISR leg",
+        "evolution_variable": "p_T,E^2 approximated by p_T,ISR^2",
+        "z_approximation": "ratio of longitudinal momentum components for incoming parton and radiated ISR",
+        "branching_probability": "derivative of ISR Sudakov factor"
+      },
+      "observation": "The Sudakov factor supplied an approximate ISR probability weight on top of the boost correction, suitable for parton-level tests where true ISR momenta are available.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] With parton-level events, true ISR momenta can be read directly from the Pythia event record, isolating ISR from hadronization and detector effects. [Gap] The authors needed to determine whether the boost and Sudakov methods recover the top mass in a pair-production process with two invisible neutrinos. [Decision] Generate 1000 parton-level dileptonic t tbar events and compare MEM mass fits with no ISR, uncorrected ISR plus veto, boost correction, and boost plus Sudakov reweighting.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Pythia parton-level simulation with MEM likelihood fit",
+        "version": "Pythia 6.4"
+      },
+      "parameters": {
+        "PDF": "CTEQ6L1",
+        "collider_energy": "sqrt(s)=14 TeV",
+        "event_count": "1000",
+        "input_top_mass": "175 GeV",
+        "cuts": "no cuts on parton momenta; acceptance=1",
+        "uncorrected_ISR_veto": "combined ISR p_T>40 GeV veto"
+      },
+      "observation": "For parton-level t tbar, uncorrected ISR with a 40 GeV veto gave a central top mass close to 175 GeV but increased the statistical uncertainty by about a factor of 1.5. The pure boost correction avoided the increased statistical error but shifted the fitted top mass downward by about 0.5 GeV. Adding Sudakov reweighting moved the central value much closer to the true input mass and fully consistent within statistical errors.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Narrow s-channel resonances are expected to be more sensitive to ISR because small transverse recoil mismeasurements can prevent simultaneous on-shell reconstruction of resonance propagators. [Gap] The authors needed to test whether the ISR methods also work for Higgs production with h -> WW -> l l nu nu. [Decision] Repeat the parton-level MEM study for 1000 Higgs events with m_h=180 GeV.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Pythia parton-level simulation with MEM likelihood fit",
+        "version": "Pythia 6.4"
+      },
+      "parameters": {
+        "PDF": "CTEQ6L1",
+        "collider_energy": "sqrt(s)=14 TeV",
+        "event_count": "1000",
+        "input_Higgs_mass": "180 GeV",
+        "Higgs_width": "approximately 0.6 GeV",
+        "ISR_veto_thresholds_tested": "40 GeV and 6 GeV"
+      },
+      "observation": "For Higgs production, uncorrected ISR did not reconstruct m_h=180 GeV even with a 40 GeV ISR-jet veto; only an unrealistically low 6 GeV veto gave marginal consistency. The pure boost correction produced a fit close to 180 GeV, and boost plus Sudakov reweighting gave near-perfect agreement with the input mass.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Parton-level ISR corrections assume access to true ISR momenta, but real analyses observe hadronized jets with detector smearing, underlying event, and acceptance losses. [Gap] The boost correction had to be tested under more realistic conditions. [Decision] Generate hadron-level t tbar samples with showering, hadronization, underlying event, and Pgs detector simulation, then construct MEM inputs using jet transfer functions and jet-permutation sums.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Pythia plus Pgs with double-Gaussian jet transfer functions",
+        "version": "Pythia 6.4; Pgs 4"
+      },
+      "parameters": {
+        "process": "pp -> t tbar -> b bbar l+ l- nu nubar",
+        "collider_energy": "sqrt(s)=14 TeV",
+        "event_count_for_fit": "1000",
+        "input_top_mass": "175 GeV",
+        "selection": "two reconstructed leptons and at least two reconstructed jets with p_T>50 GeV",
+        "acceptance_calibration": "one million Pythia/Pgs events per m_t value",
+        "jet_assignment": "all jet permutations considered; if more than four jets, only the four hardest jets permuted",
+        "lepton_and_angle_transfer_functions": "delta functions"
+      },
+      "observation": "Hadron-level uncorrected ISR with a veto on extra jets above 40 GeV shifted the fitted top mass significantly away from the 175 GeV input; lowering the veto to 20 GeV improved the result but remained clearly inconsistent. The kinematic boost correction substantially improved agreement, and adding ISR transfer functions gave a fit in very good agreement with the input mass.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] For hadron-level Higgs production, the narrow resonance makes the MEM fit highly sensitive to differences between reconstructed ISR jets and the true partonic ISR. [Gap] The parton-level boost-plus-Sudakov strategy might not be sufficient once detector resolution distorts ISR momenta. [Decision] Test the pure boost correction and Sudakov-improved treatment on fully hadronized and detector-simulated h -> WW events.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Pythia plus Pgs hadron-level Higgs MEM fit",
+        "version": "Pythia 6.4; Pgs 4"
+      },
+      "parameters": {
+        "process": "pp -> h -> W+W- -> l+ l- nu nubar",
+        "collider_energy": "sqrt(s)=14 TeV",
+        "event_count_for_fit": "1000",
+        "input_Higgs_mass": "180 GeV",
+        "corrections_tested": "no correction; pure boost correction; boost plus Sudakov reweighting"
+      },
+      "observation": "For hadron-level Higgs production, the pure boost correction did not lead to a good fit. Sudakov corrections were much less useful than at parton level and hardly improved the pure boost result, because imperfect ISR reconstruction in the detector dominated the likelihood bias.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Detector-level ISR momenta are smeared and sometimes not reconstructed as visible jets, so a deterministic boost using measured ISR is insufficient, especially for narrow resonances. [Gap] The MEM needs a probabilistic model relating observed ISR transverse momentum to partonic ISR transverse momentum. [Decision] Introduce ISR transfer functions for each incident particle and integrate over the partonic transverse momentum of each incoming leg.",
+      "action": "design",
+      "tool": {
+        "name": "Two-component ISR transverse-momentum transfer function with Vegas integration",
+        "version": ""
+      },
+      "parameters": {
+        "nonzero_visible_ISR_model": "double-Gaussian transfer function for measured p_T^vis != 0",
+        "zero_visible_ISR_model": "single Gaussian in log-space for p_T^vis=0",
+        "p_T_boundary": "p_T^0 varied between 5 and 15 GeV",
+        "additional_integration_dimensions": "2",
+        "adaptive_integrator": "Vegas",
+        "parameter_tuning": "Monte Carlo simulated data; checked for p_T of a few GeV and about 100 GeV"
+      },
+      "observation": "The ISR transfer functions approximated the Monte Carlo ISR response for both small and large p_T, effectively including Sudakov factors, detector acceptance, showering, and hadronization. The integration time increased by less than a factor of 10.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] The ISR transfer-function method should recover the input masses without being overly process-dependent. [Gap] It was necessary to verify both performance and universality of the tuned ISR transfer functions. [Decision] Apply the boost correction with ISR transfer functions to hadron-level top and Higgs samples, including transfer functions tuned separately on t tbar and h -> WW Monte Carlo events.",
+      "action": "analysis",
+      "tool": {
+        "name": "MEM likelihood fit with ISR transfer functions",
+        "version": ""
+      },
+      "parameters": {
+        "top_input_mass": "175 GeV",
+        "Higgs_input_mass": "180 GeV",
+        "event_count_per_fit": "1000",
+        "transfer_function_tunes_compared": "t tbar tune and h -> WW tune"
+      },
+      "observation": "For hadron-level Higgs production, including ISR transfer functions gave a fit consistent with m_h=180 GeV. The curves using t tbar-tuned and h -> WW-tuned ISR transfer functions were almost identical, showing weak dependence on the hard process. For hadron-level t tbar, the ISR-transfer-function result agreed very well with m_t=175 GeV, although the pure boost correction was already satisfactory.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 11,
+      "thought": "[Background] Because ISR transfer functions integrate over possible partonic ISR, one might ask whether observed ISR jets are needed at all. [Gap] A simpler model that ignores measured ISR momenta could reduce dependence on detector ISR reconstruction. [Decision] Test a fit that ignores measured ISR momenta and only integrates over ISR p_T using the zero-visible-ISR branch of the transfer function.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "MEM fit with ISR p_T integration but without measured ISR information",
+        "version": ""
+      },
+      "parameters": {
+        "ISR_information_used": "measured ISR momenta ignored",
+        "weighting": "second line of the ISR transfer function for zero visible p_T",
+        "processes_tested": "t tbar and h -> WW"
+      },
+      "observation": "The resulting fits were inconsistent with the true input values of m_t and m_h; the best-fit values came out too large, demonstrating that observed QCD radiation information remains important even when detector effects are modeled.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 12,
+      "thought": "[Background] The proposed ISR treatment could still suffer from theory-systematic uncertainties, including PDF choice, ISR cutoff choice, and missing loop corrections. [Gap] The authors needed to check whether these effects destabilize the mass fits. [Decision] Compare alternative PDFs and NLO-style event generation while keeping the analysis framework fixed.",
+      "action": "analysis",
+      "tool": {
+        "name": "CTEQ PDF comparison and Powheg event-generation cross-check",
+        "version": ""
+      },
+      "parameters": {
+        "PDFs_compared": "CTEQ6L1 and CTEQ6M",
+        "PDF_test_condition": "same event file and transfer functions determined with CTEQ6L1; PDFs modified only in MEM fit",
+        "ISR_cutoff_variation": "reasonable lower p_T cutoff variations",
+        "NLO_generator_check": "Powheg-generated events"
+      },
+      "observation": "Varying the lower ISR p_T cutoff had negligible impact; CTEQ6L1 versus CTEQ6M produced negligible differences; Powheg-generated events showed no significant difference in the results. The authors noted that full NLO development would ultimately be needed for sub-GeV mass definitions.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors validated the proposed ISR treatments by running MEM likelihood mass fits on simulated 1000-event samples for pp -> t tbar -> b bbar l+ l- nu nubar and pp -> h -> W+W- -> l+ l- nu nubar at sqrt(s)=14 TeV, comparing ideal no-ISR samples, uncorrected ISR with jet vetoes, transverse boost corrections, boost plus Sudakov reweighting, and boost plus ISR transfer functions. Hadron-level validation used Pythia 6.4 with hadronization and underlying event, Pgs 4 detector simulation, jet-energy transfer functions, acceptance functions from one million events per m_t value, and ISR transfer functions tuned on Monte Carlo.",
+    "metrics": {
+      "top_mass_input_and_recovered_with_ISR_transfer_functions": {
+        "value": "175",
+        "unit": "GeV",
+        "interpretation": "The hadron-level MEM fit with boost correction and ISR transfer functions agreed very well with the top-quark input mass of 175 GeV."
+      },
+      "Higgs_mass_input_and_recovered_with_ISR_transfer_functions": {
+        "value": "180",
+        "unit": "GeV",
+        "interpretation": "The hadron-level MEM fit with ISR transfer functions was consistent with the Higgs-boson input mass of 180 GeV."
+      },
+      "parton_level_top_uncertainty_increase_uncorrected_ISR_veto": {
+        "value": "1.5",
+        "unit": "factor",
+        "interpretation": "For parton-level t tbar with uncorrected ISR and a combined ISR p_T>40 GeV veto, the statistical uncertainty increased by about a factor of 1.5 relative to the idealized no-ISR case."
+      },
+      "parton_level_top_boost_only_bias": {
+        "value": "-0.5",
+        "unit": "GeV",
+        "interpretation": "The pure kinematic boost correction at parton level shifted the fitted top mass downward by about 0.5 GeV before Sudakov reweighting was added."
+      },
+      "extra_jet_veto_signal_loss": {
+        "value": ">40",
+        "unit": "percent",
+        "interpretation": "At 14 TeV, vetoing top-pair events with extra jets of p_T>40 GeV would remove more than 40% of the event sample."
+      },
+      "events_with_one_extra_jet_above_40GeV": {
+        "value": "27",
+        "unit": "percent",
+        "interpretation": "About 27% of simulated top-pair events had one additional jet with p_T>40 GeV."
+      },
+      "events_with_two_or_more_extra_jets_above_40GeV": {
+        "value": "15",
+        "unit": "percent",
+        "interpretation": "About 15% of simulated top-pair events had two or more additional jets with p_T>40 GeV."
+      },
+      "unrealistic_Higgs_ISR_veto_needed_without_correction": {
+        "value": "6",
+        "unit": "GeV",
+        "interpretation": "For parton-level Higgs production without ISR correction, the ISR veto threshold had to be lowered to about 6 GeV before the fit became only marginally consistent with m_h=180 GeV."
+      },
+      "ISR_transfer_function_compute_overhead": {
+        "value": "<10",
+        "unit": "factor",
+        "interpretation": "Adding ISR transfer functions increased MEM integration time by less than a factor of 10 using Vegas, while adding two integration dimensions."
+      },
+      "ISR_transfer_function_pT_boundary_stability_range": {
+        "value": "5-15",
+        "unit": "GeV",
+        "interpretation": "Varying the boundary p_T^0 between 5 and 15 GeV did not appreciably affect the fit results."
+      }
+    },
+    "final_verdict": "The original goal was met for the simulated studies. At parton level, the transverse boost correction substantially repaired ISR-induced kinematic mismatches, and Sudakov reweighting further improved mass recovery. At hadron level, pure boost correction was sufficient for the less ISR-sensitive t tbar benchmark but failed for the narrow-resonance Higgs benchmark; adding ISR transfer functions produced stable MEM fits consistent with the 175 GeV top and 180 GeV Higgs input masses. The method avoided severe ISR vetoes and increased computing time by less than a factor of 10, although the authors emphasized that a full realistic experimental treatment of systematic uncertainties and eventual NLO-level development remain future work."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 2,
+      "what_failed": "Rejecting events with hard extra jets was not an acceptable ISR solution.",
+      "diagnosis": "At the LHC, ISR is abundant; a p_T>40 GeV extra-jet veto removes more than 40% of top-pair events, and even lower-p_T ISR can still distort MEM kinematics.",
+      "correction": "Develop event-by-event ISR corrections instead of relying on severe jet vetoes."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Uncorrected parton-level t tbar ISR degraded the MEM likelihood fit even after a 40 GeV ISR veto.",
+      "diagnosis": "The hard-process matrix element did not include recoil from ISR, increasing the statistical uncertainty by about a factor of 1.5.",
+      "correction": "Apply transverse boost correction to the incoming partons and add Sudakov reweighting to reduce residual bias."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Uncorrected parton-level Higgs ISR could not reconstruct m_h=180 GeV with a 40 GeV veto.",
+      "diagnosis": "The Higgs process contains a narrow s-channel resonance with Gamma_h approximately 0.6 GeV, so even ISR transverse momenta of a few GeV can prevent on-shell Higgs and W configurations in the MEM integration.",
+      "correction": "Use the boost correction; boost plus Sudakov reweighting gave near-perfect agreement at parton level."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Hadron-level uncorrected t tbar ISR produced significantly biased mass fits even with extra-jet vetoes.",
+      "diagnosis": "ISR often produces multiple jets; even if each jet has p_T below the veto threshold, the total transverse ISR momentum can be large enough to push the hard-process MEM phase-space integration into inappropriate or unphysical regions.",
+      "correction": "Use boost correction and, for the most robust treatment, ISR transfer functions."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Pure boost correction and Sudakov reweighting were insufficient for hadron-level Higgs production.",
+      "diagnosis": "The measured ISR jet momenta did not agree accurately enough with the partonic ISR momenta after detector effects, and this mismatch dominated over the Sudakov-weight improvement for the narrow-resonance Higgs fit.",
+      "correction": "Introduce ISR transfer functions and integrate over the partonic transverse momentum of each incoming leg."
+    },
+    {
+      "step_index_ref": 11,
+      "what_failed": "Ignoring measured ISR momenta and integrating only over ISR p_T gave inconsistent mass fits.",
+      "diagnosis": "The observed QCD radiation still contains essential event-specific information; treating all events as if ISR were unobserved made the best-fit masses too large for both t tbar and Higgs benchmarks.",
+      "correction": "Retain measured ISR jet information but fold it through ISR transfer functions to account for detector smearing and acceptance."
+    }
+  ]
+}

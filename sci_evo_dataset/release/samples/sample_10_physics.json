@@ -1,0 +1,271 @@
+{
+  "paper_id": "paper:openfoamgpt_a_retrieval_augmented_large_language_model_llm_a:2025",
+  "title": "OpenFOAMGPT: A retrieval-augmented large language model (LLM) agent for OpenFOAM-based computational fluid dynamics",
+  "year": 2025,
+  "domain": "physics",
+  "venue": "The Physics of Fluids",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/758_454274b92a27bc5d97c1e80accc78095ae991cf0/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "OpenFOAMGPT, a retrieval-augmented LLM agent for setting up, modifying, running, debugging, and translating OpenFOAM CFD simulations",
+    "input_data": "OpenFOAM-v2406; OpenAI GPT-4o and o1-preview accessed through the OpenAI API; zero-shot and RAG prompts; an indexed library of OpenFOAM tutorial case descriptions containing solver names, case names, and flow types; embeddings generated as 1536-dimensional vectors using OpenAI text-embedding-3-small; LangChain for RAG; benchmark tutorial cases including Cavity flow, PitzDaily, Hotroom, Dambreak, Particle column, Mixed vessel, plus code-translation cases T-Junction, Channel395, PitzDaily, and Motorbike from OpenFOAM 12 to OpenFOAM V2406.",
+    "user_intent": "The authors wanted to reduce the expertise barrier and manual labor required for OpenFOAM-based CFD workflows, because natural-language LLM prompting alone struggled with complex OpenFOAM geometries, boundary conditions, turbulence-model changes, multiphase/particle cases, and cross-version case translation.",
+    "quantifiable_goal": "Demonstrate that the agent can successfully set up and run the six selected OpenFOAM tutorial simulations, handle alternate initial/boundary conditions and turbulence-model replacements, and translate OpenFOAM 12 cases to OpenFOAM V2406 with limited correction iterations, execution times under 10 minutes per scenario, and low token costs; observed 4o RAG costs were $0.0327-$0.3645 per six-case setup task and o1-preview RAG costs were $0.3956-$1.6475."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] OpenFOAM is an open-source CFD solver suite with many solvers for incompressible, compressible, heat-transfer, and multiphase flows, but it requires expert knowledge of case files, solvers, numerical schemes, and error logs. GPT-4o and o1-preview can generate code and plans, with o1-preview offering chain-of-thought-enabled reasoning at about six times the token price. [Gap] A generic LLM lacks reliable, current, OpenFOAM-specific procedural knowledge and cannot by itself guarantee valid case setup or debugging. [Decision] Build OpenFOAMGPT as a layered agent with a Builder, Executor, and OpenFOAM agent components, plus an iterative error-log correction loop and optional RAG over tutorial case descriptions.",
+      "action": "design",
+      "tool": {
+        "name": "OpenFOAMGPT agent architecture with OpenAI API",
+        "version": "OpenFOAM-v2406; GPT-4o; o1-preview"
+      },
+      "parameters": {
+        "gpt_4o_pricing": "$2.50 per million input tokens; $10 per million output tokens",
+        "o1_preview_pricing": "$15.00 per million input tokens; $60 per million output tokens",
+        "workflow_modules": "system prompt + user query; Builder; Executor; OpenFOAM agent with Interpreter, Builder, Runner; error-log monitoring and iterative correction"
+      },
+      "observation": "The authors specified an agent workflow in which simulation errors are appended to the user query and the setup/run process iterates until the OpenFOAM workflow succeeds or a failure remains unresolved.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Before adding retrieval, it was unknown whether the LLM agent could create OpenFOAM cases directly from natural-language problem descriptions. [Gap] Complex geometries, multiphase physics, particle dynamics, and specialized OpenFOAM dictionaries may exceed zero-shot model knowledge. [Decision] Evaluate zero-shot prompting without RAG on six OpenFOAM tutorial cases using GPT-4o, o1-mini, and o1-preview.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Zero-shot OpenFOAMGPT benchmark without RAG",
+        "version": "GPT-4o; o1-mini; o1-preview"
+      },
+      "parameters": {
+        "cases": "Cavity flow, PitzDaily, Hotroom, Dambreak, Particle column, Mixed vessel",
+        "solvers": "icoFoam, simpleFoam, buoyantBoussinesqSimpleFoam, interFoam, MPPICFoam, pimpleFoam",
+        "input_mode": "natural-language prompting only"
+      },
+      "observation": "GPT-4o succeeded only on Cavity flow and failed on PitzDaily, Hotroom, Dambreak, Particle column, and Mixed vessel. o1-mini also succeeded only on Cavity flow. o1-preview succeeded on Cavity flow and Hotroom but failed on PitzDaily, Dambreak, Particle column, and Mixed vessel. The dominant reported failure was incorrect blockMeshDict; other failures included incorrect transportProperties, incorrect 0 directory files, and incorrect kinematicCloudProperties.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] The zero-shot natural-language runs showed that specifying intricate OpenFOAM geometries purely in text was unreliable, especially because blockMeshDict generation failed repeatedly. [Gap] The agent needed more concrete geometric scaffolding to separate geometry specification from solver and dictionary setup. [Decision] Provide a detailed blockMeshDict file as part of the input and test whether o1-preview could complete the remaining setup without RAG.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "OpenFOAMGPT with supplied blockMeshDict",
+        "version": "o1-preview"
+      },
+      "parameters": {
+        "added_input": "detailed blockMeshDict file",
+        "rag_enabled": "false",
+        "cases": "Cavity flow, PitzDaily, Hotroom, Dambreak, Particle column, Mixed vessel"
+      },
+      "observation": "With blockMeshDict supplied, o1-preview successfully handled Cavity flow, PitzDaily, Hotroom, Dambreak, and Mixed vessel even without RAG. Particle column still produced an unsolvable error when relying on the LLM alone, reflecting the greater complexity of unidirectional flow combined with particle flow.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Prior results indicated that raw LLM reasoning and even supplied geometry were insufficient for the most specialized OpenFOAM workflows. [Gap] The agent needed domain-specific examples of solver choices, dictionary formats, and tutorial best practices. [Decision] Add a RAG layer using OpenFOAM tutorial descriptions embedded into vectors and retrieved through LangChain.",
+      "action": "design",
+      "tool": {
+        "name": "LangChain RAG pipeline with OpenAI text-embedding-3-small",
+        "version": ""
+      },
+      "parameters": {
+        "embedding_model": "text-embedding-3-small",
+        "embedding_dimension": "1536",
+        "knowledge_base": "OpenFOAM tutorial case descriptions with solver names, case names, and flow types",
+        "retrieval_purpose": "provide analogous validated OpenFOAM setup information during plan construction and refinement"
+      },
+      "observation": "The RAG database provided domain-specific context that the authors expected to improve prompting accuracy and enable specialization to subdomains such as aerodynamics, process engineering, heat transfer design, energy, and aerospace.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] The RAG layer was designed to supply validated OpenFOAM case knowledge missing from generic LLM prompting. [Gap] Its practical benefit needed to be measured across the same six tutorial cases and compared between GPT-4o and o1-preview. [Decision] Run the six-case benchmark with RAG and record success, iteration count, token count, cost, and qualitative simulation outputs.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "OpenFOAMGPT few-shot/RAG benchmark",
+        "version": "GPT-4o; o1-preview"
+      },
+      "parameters": {
+        "cases": "Cavity flow, PitzDaily, Hotroom, Dambreak, Particle column, Mixed vessel",
+        "rag_enabled": "true",
+        "success_check": "OpenFOAM setup and solver run with monitored error logs; final-time simulation outputs shown in Figure 3"
+      },
+      "observation": "With RAG, the agent successfully set up all six tested cases. For GPT-4o, iteration/token/cost values were: Cavity flow 2 iterations, 6632 tokens, $0.0327; PitzDaily 4, 19941, $0.0808; Hotroom 9, 37268, $0.1269; Dambreak 5, 22572, $0.0853; Particle column 10, 96666, $0.3645; Mixed vessel 6, 72769, $0.2744. For o1-preview: Cavity flow 1 iteration, 9236 tokens, $0.3956; PitzDaily 7, 40214, $0.9069; Hotroom 5, 36754, $0.93795; Dambreak 8, 20755, $0.6294; Particle column 5, 77157, $1.6475; Mixed vessel 9, 42750, $1.0148. Execution times were under 10 minutes in each instance. The particle-column kinematicCloudProperties output differed from the RAG-provided file because the output file had a length limit.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Engineering CFD work commonly requires changing boundary conditions, initial conditions, mesh resolution, end time, and material properties rather than only reproducing existing tutorials. [Gap] It was unclear whether OpenFOAMGPT could make these modifications correctly, especially for unsteady scripted boundary conditions and thermophysical-property changes. [Decision] Test alternate conditions across the tutorial cases with GPT-4o and, where needed, o1-preview.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "OpenFOAMGPT alternate-condition modification tests",
+        "version": "GPT-4o; o1-preview"
+      },
+      "parameters": {
+        "cavity_changes": "top wall velocity 1 m/s to 2 m/s; top wall velocity 1 m/s to 5 sin(2 pi t / 0.1); mesh resolution changed from 20x20x1 as reported in Table III; endTime 3 to 5",
+        "pitzdaily_change": "inlet speed 10 m/s to 20 m/s",
+        "hotroom_change": "HOT_WALL temperature 310 K to 320 K",
+        "dambreak_change": "liquid inside membrane water to oil",
+        "particle_column_changes": "fluid and particle velocity 1 m/s to 2 m/s; fluid type Air to CO",
+        "mixed_vessel_change": "angular speed 20 rad/s to 15 rad/s"
+      },
+      "observation": "GPT-4o completed most changes but failed for the unsteady cavity velocity 5 sin(2 pi t / 0.1) and for changing particle-column fluid from Air to CO. o1-preview handled all changes reported in Table III. For the unsteady cavity case, o1-preview selected codedFixedValue and generated OpenFOAM code defining amplitude 5.0 m/s, period 0.1 s, omega = 2 pi / period, and velocity = amplitude sin(omega time) in the movingWall U boundary file.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Turbulent CFD simulations require RANS or LES closure models, and changing models often requires adding, deleting, or changing boundary fields, transport equations, and numerical schemes rather than only renaming a model. [Gap] The agent's ability to perform zero-shot turbulence-model alternation for common and less common models was unknown. [Decision] Test model replacements including RNG k-epsilon, k-omega SST, LRR, kkLOmega, Smagorinsky LES, and k-epsilon insertion into nominally laminar cases.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "OpenFOAMGPT turbulence-model replacement tests",
+        "version": "GPT-4o; o1-preview"
+      },
+      "parameters": {
+        "rans_replacements": "standard k-epsilon to RNG k-epsilon, k-omega SST, LRR, and kkLOmega",
+        "les_replacement": "dynamicKEqn to Smagorinsky",
+        "laminar_to_turbulent": "Dambreak, Particle column, and Mixed vessel laminar flow to k-epsilon"
+      },
+      "observation": "The agent successfully handled most turbulence-model changes. GPT-4o succeeded for Cavity flow kEpsilon to RNGkEpsilon/kOmegaSST/LRR, PitzDaily kEpsilon to kOmegaSST, PitzDaily dynamicKEqn LES to Smagorinsky LES, and Dambreak laminar to kEpsilon. GPT-4o failed for Cavity flow kEpsilon to kkLOmega, while o1-preview succeeded and generated a turbulenceProperties file with simulationType RAS, RASModel kkLOmega, turbulence on, printCoeffs on, and coefficients sigmaK 2.0, sigmaL 0.66666, alphaOmega 0.52, betaOmega 0.072. Both GPT-4o and o1-preview failed for Particle column laminar to kEpsilon due to incorrect kinematicCloudProperties. GPT-4o also failed for Mixed vessel laminar to kEpsilon.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] OpenFOAM cases are not always compatible between the independently maintained www.openfoam.org and www.openfoam.com distributions, so translating cases can require changes to source code, dictionaries, and library configurations. [Gap] Web-based LLM code translation may miss platform-specific incompatibilities and lacks direct execution validation. [Decision] Compare web-based o1-preview with the o1-preview OpenFOAMGPT agent on translating four OpenFOAM 12 tutorial cases to OpenFOAM V2406, providing only the OpenFOAM 12 code as input.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "OpenFOAMGPT code translation from OpenFOAM 12 to OpenFOAM V2406",
+        "version": "o1-preview"
+      },
+      "parameters": {
+        "source_platform": "OpenFOAM 12 from www.openfoam.org",
+        "target_platform": "OpenFOAM V2406 from www.openfoam.com",
+        "translation_cases": "T-Junction RANS, Channel395 LES, PitzDaily RANS, Motorbike RANS",
+        "input_constraint": "no OpenFOAM V2406 platform information was provided"
+      },
+      "observation": "With web-based o1-preview, Channel395 was the only case reported to translate successfully; T-Junction had incorrect post-processing functions in controlDict, PitzDaily had incompatible dimensions for an operation, and Motorbike failed. With the OpenFOAMGPT agent, T-Junction and Channel395 succeeded, PitzDaily was marked successful in the table but was reported in the text to fail to converge after a few steps, and Motorbike failed because snappyHexMeshDict was incorrect.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Both GPT-4o and o1-preview could be used inside the same agent, but they differ strongly in cost and reasoning behavior. [Gap] It was necessary to decide whether o1-preview's stronger reasoning justified its higher token price for routine CFD automation. [Decision] Analyze the benchmark outcomes, token usage, costs, and failure cases across RAG setup, alternate conditions, turbulence-model changes, and translation.",
+      "action": "analysis",
+      "tool": {
+        "name": "Cost and performance comparison",
+        "version": ""
+      },
+      "parameters": {
+        "models_compared": "GPT-4o and o1-preview",
+        "cost_basis": "OpenAI API input/output token prices reported in the paper",
+        "evaluation_scope": "six-case setup benchmark, boundary-condition changes, turbulence-model changes, code translation"
+      },
+      "observation": "o1-preview showed superior performance on complex reasoning tasks such as codedFixedValue unsteady velocity, kkLOmega turbulence setup, and some difficult property changes, but it did not consistently reduce iterations or token usage in the six-case RAG benchmark. Because o1-preview tokens cost about six times more, the authors concluded that GPT-4o was more cost-effective for many tasks, while o1-preview was valuable for more complex cases. They also emphasized human oversight and monitoring because model performance can fluctuate over time.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors validated OpenFOAMGPT by running OpenFOAM case-setup and solver workflows, monitoring error logs through an iterative correction loop, checking whether each case executed successfully, recording iterations/tokens/costs, showing final-time simulation outputs for the six RAG tutorial cases, and tabulating success/failure for alternate conditions, turbulence-model changes, and OpenFOAM 12-to-V2406 code translation.",
+    "metrics": {
+      "zero_shot_natural_language_success_gpt_4o": {
+        "value": "1/6",
+        "unit": "cases",
+        "interpretation": "Without RAG and using natural-language prompting only, GPT-4o succeeded only on the simple Cavity flow case."
+      },
+      "zero_shot_natural_language_success_o1_preview": {
+        "value": "2/6",
+        "unit": "cases",
+        "interpretation": "Without RAG and using natural-language prompting only, o1-preview succeeded on Cavity flow and Hotroom but still failed on four cases."
+      },
+      "rag_setup_success": {
+        "value": "6/6",
+        "unit": "cases",
+        "interpretation": "With RAG enabled, OpenFOAMGPT successfully set up all six tested tutorial simulations."
+      },
+      "gpt_4o_rag_cost_range": {
+        "value": "0.0327-0.3645",
+        "unit": "USD per scenario",
+        "interpretation": "Cost range for GPT-4o with RAG across the six setup cases, with the highest cost for Particle column."
+      },
+      "o1_preview_rag_cost_range": {
+        "value": "0.3956-1.6475",
+        "unit": "USD per scenario",
+        "interpretation": "Cost range for o1-preview with RAG across the six setup cases, reflecting higher o1-preview token prices."
+      },
+      "maximum_reported_execution_time": {
+        "value": "<10",
+        "unit": "minutes per instance",
+        "interpretation": "All RAG-enabled six-case setup tests completed in under ten minutes according to the authors."
+      },
+      "alternate_condition_success_o1_preview": {
+        "value": "all Table III changes",
+        "unit": "tasks",
+        "interpretation": "The paper states that the o1-preview agent successfully handled all alternate initial, boundary, mesh, and property changes in Table III."
+      },
+      "code_translation_agent_blocking_failure_rate": {
+        "value": "1/4",
+        "unit": "translation cases",
+        "interpretation": "Only the Motorbike case had errors that prevented it from running with the agent, although PitzDaily was also reported to fail to converge after a few steps."
+      }
+    },
+    "final_verdict": "The original goal was substantially but not completely met. RAG-enabled OpenFOAMGPT successfully set up all six representative OpenFOAM tutorial cases at low monetary cost and under ten minutes per instance, and o1-preview enabled difficult modifications such as scripted unsteady boundary conditions and the less common kkLOmega turbulence model. However, failures remained for natural-language zero-shot setup without RAG, Particle column turbulence conversion, GPT-4o on some complex modifications, and Motorbike cross-platform translation; therefore the system demonstrated strong acceleration potential but still required human oversight and targeted debugging."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 2,
+      "what_failed": "Zero-shot natural-language case setup without RAG failed on most nontrivial tutorial cases.",
+      "diagnosis": "The models could not reliably infer complex OpenFOAM geometry and dictionary details from natural language alone; the most common error was incorrect blockMeshDict, with additional errors in transportProperties, 0 directory files, and kinematicCloudProperties.",
+      "correction": "The authors supplied detailed blockMeshDict files and later added RAG over OpenFOAM tutorial descriptions to provide domain-specific setup knowledge."
+    },
+    {
+      "step_index_ref": 3,
+      "what_failed": "Particle column remained unresolved when using o1-preview with a supplied blockMeshDict but without RAG.",
+      "diagnosis": "The case required coupling unidirectional flow with particle flow and specialized particle-dynamics setup, which the authors described as too complex for the LLM alone.",
+      "correction": "The authors enabled RAG; with RAG, the particle-column setup succeeded, although the generated kinematicCloudProperties file differed from the RAG-provided file because of an output length limit."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "GPT-4o failed to implement the unsteady cavity top-wall velocity 5 sin(2 pi t / 0.1).",
+      "diagnosis": "This change required more than replacing a constant boundary value; it required selecting an appropriate OpenFOAM boundary type and generating embedded code.",
+      "correction": "The authors used o1-preview, which selected codedFixedValue and generated the required OpenFOAM scripting in the U file."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "GPT-4o failed to change the Particle column fluid type from Air to CO.",
+      "diagnosis": "The paper reports the failure but does not provide a detailed root-cause analysis beyond the complexity of property changes in the Particle column case.",
+      "correction": "The authors used o1-preview, which successfully handled the change according to Table III."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Particle column laminar-to-kEpsilon turbulence-model conversion failed for both GPT-4o and o1-preview.",
+      "diagnosis": "The reported error was incorrect kinematicCloudProperties, consistent with the particle-column case being more complex than the other tutorials.",
+      "correction": "No full correction was reported; the result was left as a limitation."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "GPT-4o failed to change Cavity flow from kEpsilon to kkLOmega and failed to change Mixed vessel from laminar flow to kEpsilon.",
+      "diagnosis": "The kkLOmega model is less commonly used and more complex, requiring correct RAS model configuration and coefficients; the paper does not provide a detailed diagnosis for the Mixed vessel failure.",
+      "correction": "For kkLOmega, o1-preview succeeded and generated the turbulenceProperties configuration. No o1-preview correction was reported for the Mixed vessel turbulence change."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Web-based o1-preview failed on most OpenFOAM 12-to-V2406 translation cases.",
+      "diagnosis": "Errors included inaccurate post-processing function entries in controlDict and incompatible dimensions for field operations, showing that cross-platform OpenFOAM translation requires validation and targeted debugging.",
+      "correction": "The authors used the OpenFOAMGPT agent with execution feedback, which resolved T-Junction and Channel395 and improved PitzDaily relative to web-only translation."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "The agent failed to run the Motorbike translation case and PitzDaily failed to converge after a few steps.",
+      "diagnosis": "Motorbike failed because snappyHexMeshDict was incorrect. For PitzDaily, the paper reports non-convergence after a few steps but does not give a detailed cause.",
+      "correction": "No complete correction was reported; the authors identified these as remaining limitations of the agent-based translation workflow."
+    }
+  ]
+}

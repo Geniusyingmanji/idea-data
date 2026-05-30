@@ -1,0 +1,299 @@
+{
+  "paper_id": "paper:l_m_24_building_a_dataset_for_language_molecules_acl_2024:2024",
+  "title": "L+M-24: Building a Dataset for Language+Molecules @ ACL 2024",
+  "year": 2024,
+  "domain": "biology",
+  "venue": "LANGMOL",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/14805_e855963bdaa7a3b46d9a79707d80795f06fbf1ed/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "L+M-24, a molecule-language paired dataset and shared-task benchmark for Language+Molecules at ACL 2024",
+    "input_data": "Three public or shared molecule-function data sources: PubChem-derived molecule-specific properties such as odor, taste, and decomposition; CheF prefinal_v3 functional labels mined from patent literature, including CheF property summarizations and ChatGPT summarization source; and ChemFOnt health effect relations, organoleptic effect relations, and role relations. The authors also used six manually written natural-language seed templates, GPT-4, WordNet lemmatizer, RDKit, MolT5 Small/Base/Large, and Meditron-7B.",
+    "user_intent": "Address scarcity and limitations of existing molecule-language paired datasets, which were described as small scraped datasets, large but noisy entity-linked literature datasets, or template-converted property-prediction datasets that often ignore natural-language compositionality, abstraction, and functionality.",
+    "quantifiable_goal": "Build a dataset for language-to-molecule and molecule-to-language translation that explicitly tests compositionality by withholding 20% of property combinations for evaluation; produce train/evaluation splits with 160,492 training molecule-description pairs and 21,839 pairs each for molecule generation and molecule captioning evaluation; create reusable natural-language templates, ultimately 917 distinct templates."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Prior language-molecule datasets existed, including small scraped datasets, large noisy datasets from entity linking in scientific literature, and template-based conversions of prediction datasets. [Gap] These datasets did not adequately test the benefits of natural language for compositionality, abstraction, and functionality in molecule design. [Decision] Frame L+M-24 around those three goals and organize it into application categories relevant to small molecules.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Survey of prior language-molecule datasets and models",
+        "version": ""
+      },
+      "parameters": {
+        "target_capabilities": "compositionality, abstraction, functionality",
+        "application_categories": "Biomedical; Light and Electricity; Human Interaction and Organoleptics; Agriculture and Industry"
+      },
+      "observation": "The paper identified four dataset categories and example properties such as anti-neoplastic, glaucoma treatment, capillarigenic, photoelectric conversion, photopolymerization, dielectric, pungent, bitter, nephrotoxic, herbicide, emulsifier, and carcinogen.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] PubChem contains curated molecule-associated properties and was previously used to extract molecule-specific descriptions. [Gap] The other selected functional resources did not provide molecule-specific descriptions such as odor, taste, and decomposition. [Decision] Incorporate PubChem-derived properties to add molecule-specific natural-language attributes to L+M-24.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "PubChem property extraction as described by Zhao et al. 2023c",
+        "version": ""
+      },
+      "parameters": {
+        "property_examples": "odor, taste, decomposition"
+      },
+      "observation": "PubChem contributed molecule-specific descriptive properties that complemented the more general functional labels from CheF and ChemFOnt.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] CheF provides functional properties extracted from patent literature, giving access to molecule functions outside standard scientific-literature datasets. [Gap] Raw CheF labels include duplication, overly broad labels, labels with too few molecules, and naming errors. [Decision] Process CheF prefinal_v3 by creating a property set from both property summarizations and ChatGPT summarization sources, lemmatizing for deduplication, thresholding by molecule count, selecting relevant functional label patterns, and manually cleaning labels.",
+      "action": "analysis",
+      "tool": {
+        "name": "CheF prefinal_v3 with WordNet lemmatizer",
+        "version": "prefinal_v3"
+      },
+      "parameters": {
+        "minimum_molecules_per_property": "100 molecules",
+        "selected_label_patterns": "X-icide, anti-X, X treatment, X modulators, X inhibitors, X agonists, X antagonists, light, electricity",
+        "manual_filtering": "removed uninformative labels that were too broad or insufficiently functional; corrected naming and duplication errors"
+      },
+      "observation": "A curated set of CheF-derived functional properties was obtained, spanning patent-mined biomedical, light/electricity, agricultural, and industrial functions.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] ChemFOnt is a chemical functional ontology resource with relation categories directly relevant to health, organoleptic properties, and molecule roles. [Gap] CheF and PubChem alone did not cover all desired functional and experiential categories. [Decision] Add selected ChemFOnt relation types to broaden coverage of functionality and human interaction.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "ChemFOnt",
+        "version": ""
+      },
+      "parameters": {
+        "relation_categories": "health effect relations; organoleptic effect relations; role relations"
+      },
+      "observation": "ChemFOnt contributed functional relation data to the L+M-24 property pool. In the final statistics, health_effect_relations accounted for 309,532 property-molecule pairs, organoleptic_effect_relations for 20,501 pairs, and role_relation for 693,648 pairs.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] The dataset needed natural-language descriptions rather than only property labels, and descriptions needed to support multiple combinations of molecular properties. [Gap] Handwriting templates for every property combination would be impractical and rigid. [Decision] Manually write six seed templates and use GPT-4 to rephrase combinations of up to six seed templates into single-sentence compositional templates, followed by manual checking and correction.",
+      "action": "design",
+      "tool": {
+        "name": "GPT-4",
+        "version": ""
+      },
+      "parameters": {
+        "manual_seed_templates": "6",
+        "seed_templates": "The molecule is a <0>.; It belongs to the <1> class of molecules.; It has an effect on <2>.; It impacts <3>.; The molecule is <4>.; The molecule has a <5>.",
+        "combination_size": "up to 6 templates",
+        "manual_quality_control": "templates manually checked and corrected to a matching standard"
+      },
+      "observation": "GPT-4-assisted template generation produced 917 distinct sentence templates for combinations of molecular properties.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Each molecule may have multiple properties, and each property was assignable to one or more template slots based on category or individual consideration. [Gap] Some molecules had property-slot combinations without an exact matching template, and some properties such as polymerization or decomposition were already sentence-like. [Decision] Convert property sets into descriptions by choosing a matching template at random when available; otherwise recursively split properties into two equal-sized groups, template each group separately, and concatenate the resulting sentences.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Template-based caption construction",
+        "version": ""
+      },
+      "parameters": {
+        "template_selection": "random among matching templates with correct slots",
+        "fallback_strategy": "split properties into two equal-sized groups and retry recursively",
+        "sentence_like_properties": "polymerization and decomposition were not templated",
+        "caption_diversity_variant": "released version with 5 captions per molecule; group sizes split at random; sentences split apart 50% of the time even when matching templates existed"
+      },
+      "observation": "Natural-language molecule descriptions were generated from property sets, including a released multi-caption variant with 5 captions per molecule.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] The dataset needed clean molecule identities and evaluation splits that test compositional generalization. [Gap] Duplicate molecules and molecules not processable by cheminformatics tooling could distort both training and evaluation, and random splits alone would not test unseen property combinations. [Decision] Merge duplicate molecules using RDKit, remove molecules that could not be processed, withhold 20% of property combinations into evaluation, and split remaining molecules into training and evaluation portions.",
+      "action": "analysis",
+      "tool": {
+        "name": "RDKit",
+        "version": ""
+      },
+      "parameters": {
+        "duplicate_handling": "merge duplicate molecules",
+        "unprocessable_molecules": "removed",
+        "held_out_property_combinations": "20%",
+        "remaining_combination_split": "80% of molecules from remaining combinations retained for training; 20% placed in evaluation",
+        "evaluation_tasks": "molecule captioning and molecule generation"
+      },
+      "observation": "The final training set contained 160,492 molecule-description pairs. The molecule generation evaluation set contained 21,839 pairs, and the molecule captioning evaluation set contained 21,839 pairs. Special train/validation splits using the same procedure as the official evaluation dataset were also released.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] L+M-24 was intended as a shared-task benchmark for molecule captioning and molecule generation. [Gap] Existing metrics did not fully capture compositional property recovery or uniqueness on held-out combinations, and invalid generated molecules needed explicit handling. [Decision] Adopt evaluation metrics from Edwards et al. 2022, set FTS scores to zero for invalid molecules, add uniqueness for generated molecules on held-out property combinations, and add property-specific precision, recall, and F1 scores based on tokenized property-name matching.",
+      "action": "design",
+      "tool": {
+        "name": "L+M-24 evaluation suite",
+        "version": ""
+      },
+      "parameters": {
+        "captioning_metrics": "BLEU-2, BLEU-4, ROUGE-1, ROUGE-2, ROUGE-L, METEOR, Text2Mol",
+        "generation_metrics": "BLEU, exact match, Levenshtein distance, MACCS FTS, RDK FTS, Morgan FTS, FCD, Text2Mol, validity",
+        "held_out_generation_metric": "uniqueness",
+        "property_metrics": "precision, recall, F1 by tokenized property-name matching; macro-averaged across properties and broad categories",
+        "invalid_molecule_handling": "FTS score set to zero for invalid generated molecules"
+      },
+      "observation": "The evaluation protocol measured both surface translation quality and property-specific compositional recovery, including performance on held-out property combinations.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] A dataset intended for shared-task use needs baseline models and evidence of difficulty. [Gap] It was unknown how existing molecule-language models and medical LLMs would perform on L+M-24, especially on rare properties and unseen property combinations. [Decision] Finetune MolT5 Small/Base/Large and Meditron-7B on the released training split and evaluate on the validation split for both captioning and molecule generation.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "HuggingFace Transformers fine-tuning of MolT5 and Meditron-7B",
+        "version": ""
+      },
+      "parameters": {
+        "MolT5_epochs": "20",
+        "MolT5_learning_rate": "2e-5",
+        "MolT5_weight_decay": "0.01",
+        "MolT5_batch_size_small_base": "128",
+        "MolT5_batch_size_large": "48",
+        "Meditron_epochs": "5",
+        "Meditron_context_length": "930",
+        "Meditron_learning_rate": "2e-6",
+        "Meditron_batch_size": "8 for molecule generation, 16 for caption generation"
+      },
+      "observation": "The baselines showed L+M-24 was challenging. For captioning, Meditron-7B achieved the best reported overall property-identification F1 of 16.81, with high precision but low recall. For molecule generation, Meditron-7B achieved BLEU 69.40, exact match 0.01, MACCS FTS 77.16, RDK FTS 69.34, Morgan FTS 50.07, FCD 2.46, Text2Mol 7.80, and validity 99.63 on the validation split. On the 2,107 held-out-combination validation examples, Meditron-7B achieved BLEU 28.04, MACCS FTS 40.90, RDK FTS 27.42, Morgan FTS 16.82, FCD 3.91, Text2Mol 22.46, uniqueness 74.81, and validity 98.58.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors verified the dataset by releasing train/validation/evaluation splits and benchmarking finetuned MolT5 Small/Base/Large and Meditron-7B models on molecule captioning and molecule generation. Captioning was evaluated with BLEU, ROUGE, METEOR, Text2Mol, and property-specific precision/recall/F1. Molecule generation was evaluated with BLEU, exact match, Levenshtein distance, MACCS/RDK/Morgan fingerprint similarity, FCD, Text2Mol, validity, and held-out-combination uniqueness.",
+    "metrics": {
+      "training_pairs": {
+        "value": "160492",
+        "unit": "molecule-description pairs",
+        "interpretation": "Final size of the released L+M-24 training set."
+      },
+      "captioning_evaluation_pairs": {
+        "value": "21839",
+        "unit": "pairs",
+        "interpretation": "Size of the molecule captioning evaluation set."
+      },
+      "generation_evaluation_pairs": {
+        "value": "21839",
+        "unit": "pairs",
+        "interpretation": "Size of the molecule generation evaluation set."
+      },
+      "generated_templates": {
+        "value": "917",
+        "unit": "templates",
+        "interpretation": "Number of distinct GPT-4-assisted compositional templates after manual checking and correction."
+      },
+      "held_out_property_combinations": {
+        "value": "20",
+        "unit": "percent",
+        "interpretation": "Fraction of property combinations withheld into evaluation to test compositional generalization."
+      },
+      "total_property_molecule_pairs": {
+        "value": "1512865",
+        "unit": "property-molecule pairs",
+        "interpretation": "Total number of property-molecule associations reported in the dataset statistics."
+      },
+      "best_captioning_property_F1": {
+        "value": "16.81",
+        "unit": "F1 points",
+        "interpretation": "Best overall property-specific captioning F1 on the validation split, achieved by Meditron-7B; indicates the benchmark is difficult."
+      },
+      "best_captioning_BLEU_4": {
+        "value": "57.6",
+        "unit": "BLEU-4 points",
+        "interpretation": "Best BLEU-4 captioning score in Table 2, achieved by Meditron-7B."
+      },
+      "best_generation_validity": {
+        "value": "100.0",
+        "unit": "percent",
+        "interpretation": "Highest generated-molecule validity among baselines on the validation split, achieved by MolT5-Base."
+      },
+      "best_generation_Morgan_FTS": {
+        "value": "50.07",
+        "unit": "FTS points",
+        "interpretation": "Best Morgan fingerprint similarity for molecule generation on the validation split, achieved by Meditron-7B."
+      },
+      "held_out_subset_size": {
+        "value": "2107",
+        "unit": "data points",
+        "interpretation": "Number of validation examples in the held-out property-combination subset."
+      },
+      "best_held_out_uniqueness": {
+        "value": "74.81",
+        "unit": "percent",
+        "interpretation": "Highest uniqueness on held-out-combination molecule generation among baselines, achieved by Meditron-7B."
+      }
+    },
+    "final_verdict": "The dataset-construction goal was met: L+M-24 was built with the intended compositional split, four application categories, 917 checked templates, 160,492 training pairs, and 21,839-pair evaluation sets for each translation direction. The benchmark results also verified that the dataset is challenging: models produced syntactically valid molecules at high rates in many cases, but property-specific captioning F1 and held-out-combination performance remained low, supporting the authors' claim that L+M-24 stresses compositionality, abstraction, and function rather than serving as an already-solved translation benchmark."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Raw CheF-derived property labels included overly broad, uninformative, duplicated, or incorrectly named labels.",
+      "diagnosis": "The CheF extraction and summarization sources were not directly standardized for the L+M-24 functional-property taxonomy.",
+      "correction": "The authors lemmatized labels for deduplication, removed labels linked to fewer than 100 molecules, selected only specified functional label categories, manually removed broad or uninformative labels, and manually corrected label naming and duplication errors."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Some molecules could not be processed during dataset construction.",
+      "diagnosis": "The paper states that molecules which could not be processed were removed after duplicate merging with RDKit, implying incompatibility with the processing pipeline.",
+      "correction": "Unprocessable molecules were removed from the dataset."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Captioning baselines had very low property-specific recall and F1 despite sometimes high precision.",
+      "diagnosis": "The authors report that models labeled a molecule with a property only when highly confident and struggled with rare properties common in the dataset.",
+      "correction": "The paper suggests future work with more sophisticated decoding algorithms, better fine-tuning methods, more training data, and larger models."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Certain property classes, especially X-icides, were never identified by the captioning models in the selected subproperty results.",
+      "diagnosis": "The models struggled with rare or difficult property classes in the L+M-24 formulation.",
+      "correction": "The authors note that scaling model size or training data may yield non-linear improvements, and that specific methods for improving compositionality are a future direction."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Most models failed on held-out property combinations for captioning; MolT5 Small/Base/Large all had 0.00 precision, recall, and F1 for held-out combinations, while Meditron-7B reached only F1 0.56.",
+      "diagnosis": "Poor individual-property performance limited success on compositional generalization to never-before-seen property combinations.",
+      "correction": "The authors position held-out combinations as a key benchmark challenge and suggest future work on improved compositional methods."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "The Text2Mol metric showed poor domain transfer to L+M-24.",
+      "diagnosis": "Text2Mol had been trained on ChEBI-20, whose domain did not transfer well to the L+M-24 dataset.",
+      "correction": "For the final workshop evaluation, the authors planned to train an updated Text2Mol model on L+M-24."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "FCD was numerically unstable for MolT5 Small and MolT5 Base molecule-generation results, reported as NaN.",
+      "diagnosis": "The paper states that FCD suffered from numerical instability for the small and base models.",
+      "correction": "The authors reported NaN for those FCD values and computed FCD only using syntactically valid molecules."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Molecule-generation models often produced similar outputs for many different prompts and performed worse on unseen property combinations.",
+      "diagnosis": "The authors attribute the difficulty to common property combinations being associated with structurally very different molecules and to models not grasping rare properties well.",
+      "correction": "The paper identifies improved evaluation metrics, better modeling of function, additional modalities such as proteins or 3D representations, and molecule-language instruction-following/search frameworks as future directions."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Evaluation metrics could penalize semantically reasonable captions that used different wording from ground truth.",
+      "diagnosis": "For example, a ground-truth anti-tumor agent could be described by a model as a cancer treatment, capturing an important characteristic but differing in tokenized language.",
+      "correction": "The authors note the need for improved evaluation metrics, especially for molecule generation and functional descriptions where many outputs may be valid."
+    }
+  ]
+}

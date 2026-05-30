@@ -1,0 +1,349 @@
+{
+  "paper_id": "paper:instant3d_fast_text_to_3d_with_sparse_view_generation_and_la:2023",
+  "title": "Instant3D: Fast Text-to-3D with Sparse-View Generation and Large Reconstruction Model",
+  "year": 2023,
+  "domain": "cs",
+  "venue": "International Conference on Learning Representations",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/3210_3af134a559a618b3185390646d49d1d4e7ffab45/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "Instant3D, a feed-forward text-to-3D system that generates a NeRF 3D asset from a text prompt using one-shot sparse multi-view diffusion generation followed by transformer-based sparse-view reconstruction",
+    "input_data": "Pretrained 2D text-to-image diffusion models, primarily SDXL; Objaverse multi-view renderings of about 750K 3D objects; four 512 x 512 rendered views per object at elevation 20 degrees and azimuths 0, 90, 180, and 270 degrees; Cap3D captions generated from BLIP-2 multi-view captions consolidated by an LLM; 2000 manually labeled samples to train a CLIP-feature SVM quality scorer; all 750K Objaverse objects for the reconstruction model; Google Scanned Objects dataset with 1019 objects for reconstruction evaluation; 400 DreamFusion text prompts for text-to-3D evaluation",
+    "user_intent": "Existing score-distillation text-to-3D methods can produce high-quality assets but require per-prompt optimization taking 1 to 10 hours and suffer from over-saturation, low diversity, and Janus/multi-face artifacts, while existing feed-forward 3D generators trained only on limited 3D data produce lower-quality, less diverse, poorly aligned results.",
+    "quantifiable_goal": "Generate high-quality, diverse text-conditioned 3D NeRF assets in about 20 seconds per prompt, roughly two orders of magnitude faster than optimization-based methods, while achieving CLIP text-image alignment competitive with ProlificDreamer and better than Shap-E and DreamFusion; reconstruct 3D from only 4 sparse views."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Prior 3D diffusion or implicit-generation methods trained directly on million-scale 3D datasets are limited by the scarcity, diversity, and annotation quality of 3D data. SDS-based methods such as DreamFusion and ProlificDreamer leverage strong 2D diffusion priors but require slow per-scene optimization and can show over-saturated colors and Janus artifacts. [Gap] The authors needed a method that preserves the semantic and visual quality of pretrained 2D diffusion while avoiding per-prompt 3D optimization. [Decision] They chose a two-stage feed-forward pipeline: first generate a sparse set of consistent 2D views from text, then directly regress a NeRF from those views.",
+      "action": "design",
+      "tool": {
+        "name": "Two-stage Instant3D pipeline",
+        "version": ""
+      },
+      "parameters": {
+        "stage_1": "text-conditioned sparse-view generation",
+        "stage_2": "feed-forward sparse-view NeRF reconstruction",
+        "target_runtime": "about 20 s per 3D asset"
+      },
+      "observation": "The proposed decomposition allowed use of a pretrained 2D text-to-image diffusion model for semantic generation and a learned reconstructor for fast 3D lifting without per-scene optimization.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Fine-tuning the text-to-image model required paired text and multi-view image data, but Objaverse contains many low-quality or simple objects that could degrade photorealism if used naively. [Gap] The authors needed a compact, high-quality fine-tuning set that preserved SDXL's 2D generation ability while teaching the 2 x 2 multi-view format. [Decision] They rendered Objaverse objects in a fixed four-view camera setup, generated captions, and trained a quality scorer to select the top-ranked 10K objects.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Blender Cycles + Cap3D + BLIP-2 + CLIP-feature SVM scorer",
+        "version": ""
+      },
+      "parameters": {
+        "num_objaverse_objects_rendered": "about 750K",
+        "views_per_object_for_generation_data": "4",
+        "view_resolution": "512 x 512 pixels",
+        "grid_resolution": "1024 x 1024 pixels",
+        "elevation": "20 degrees",
+        "azimuths": "0, 90, 180, 270 degrees",
+        "background": "white",
+        "field_of_view": "50 degrees",
+        "camera_distance": "2.7",
+        "manual_labels_for_scorer": "2000 samples",
+        "selected_finetuning_data": "top 10K objects"
+      },
+      "observation": "The data pipeline produced captioned 2 x 2 multi-view image grids and a curated 10K subset. The paper reports that using all data naively reduced photorealism, while curated data improved visual quality even when CLIP-score differences were small.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] A 2D diffusion model naturally operates on single images, and prior sequential multi-view generation can accumulate inconsistencies. More generated views help reconstruction but reduce per-view resolution and increase inconsistency risk. [Gap] The authors needed a multi-view generation format that allowed views to attend to each other in one denoising process and still gave enough coverage for reconstruction. [Decision] They represented four object views as a single 2 x 2 image grid and used exactly 4 structured views as a balance between generation consistency and reconstruction coverage.",
+      "action": "design",
+      "tool": {
+        "name": "SDXL image-grid sparse-view generation design",
+        "version": ""
+      },
+      "parameters": {
+        "base_model": "SDXL",
+        "num_views": "4",
+        "grid_layout": "2 x 2",
+        "per_view_resolution": "512 x 512 pixels",
+        "camera_elevation": "20 degrees",
+        "camera_azimuths": "0, 90, 180, 270 degrees"
+      },
+      "observation": "The image-grid design matched the original 2D diffusion data format and enabled the four views to be generated jointly in one denoising process. The authors empirically found that 4 views gave a good balance between view consistency and reconstruction coverage.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] SDXL already has strong text understanding and image generation ability, so the authors hypothesized that only lightweight adaptation was needed to unlock multi-view generation. [Gap] Excessive fine-tuning or low-quality data could damage compositionality and photorealism. [Decision] They fine-tuned SDXL on the curated 10K 2 x 2 multi-view grids using the standard denoising diffusion loss with a small learning rate and large batch.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "SDXL fine-tuning with AdamW and denoising diffusion loss",
+        "version": ""
+      },
+      "parameters": {
+        "learning_rate": "1e-5",
+        "optimizer": "AdamW",
+        "beta1": "0.9",
+        "beta2": "0.999",
+        "weight_decay": "1e-2",
+        "precision": "fp16",
+        "batch_size": "192",
+        "num_gpus": "32 NVIDIA A100",
+        "training_steps_final_setup": "10K steps",
+        "training_data_final_setup": "10K curated multi-view grids",
+        "resolution_conditioning": "1024 x 1024",
+        "crop_conditioning": "0, 0"
+      },
+      "observation": "The fine-tuned SDXL model generated sparse, structured multi-view images from text. In the final reported setup, the SDXL model fine-tuned on 10K curated data for 10K steps achieved CLIP scores of 26.87 with ViT-L/14 and 41.77 with ViT-bigG-14 after 3D reconstruction.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] The fine-tuning images always had centered objects on clean white backgrounds, but standard diffusion inference begins from pure Gaussian noise. [Gap] Starting from random Gaussian noise caused cluttered generated backgrounds, making the feed-forward reconstructor's input distribution harder. [Decision] They introduced Gaussian blob initialization, following the SDEdit idea, to bias generation toward centered objects on white backgrounds.",
+      "action": "design",
+      "tool": {
+        "name": "Gaussian blob initialization for latent diffusion inference",
+        "version": ""
+      },
+      "parameters": {
+        "background": "solid white",
+        "blob_location": "center of each quadrant",
+        "blob_standard_deviation": "sigma = 0.1 in main method",
+        "grid_layout": "2 x 2",
+        "diffusion_timestep_example": "t = 980/1000 for 50 DDIM denoising steps",
+        "experiment_inference_steps": "100 DDIM steps"
+      },
+      "observation": "Compared with standard Gaussian initialization, Gaussian blob initialization produced cleaner white backgrounds in the generated 4-view grids and reduced difficulty for the second-stage reconstructor.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Sparse-view reconstruction from only four wide-baseline images is ambiguous and requires strong learned 3D priors. Existing sparse reconstruction methods often require more images, category-specific training, or small datasets. [Gap] The authors needed a scalable feed-forward model that could infer geometry and appearance directly from four generated views with known poses. [Decision] They built a transformer-based sparse-view large reconstruction model using a DINO ViT image encoder with camera modulation, an image-to-triplane transformer decoder, and a NeRF MLP decoder.",
+      "action": "design",
+      "tool": {
+        "name": "DINO-ViT-B/16 sparse-view triplane NeRF reconstructor",
+        "version": ""
+      },
+      "parameters": {
+        "image_encoder": "DINO-ViT-B/16",
+        "vit_layers": "12",
+        "vit_hidden_dimension": "768",
+        "patch_size": "16 x 16",
+        "input_resolution": "512 x 512 pixels",
+        "tokens_per_image": "1025 including CLS",
+        "tokens_for_4_views": "4100",
+        "camera_injection": "AdaLN camera modulation in each transformer layer",
+        "triplane_decoder_layers": "16",
+        "triplane_decoder_hidden_dimension": "1024",
+        "attention_heads": "16",
+        "head_dimension": "64",
+        "triplane_resolution": "3 planes of 64 x 64",
+        "triplane_feature_dimension_per_plane": "80",
+        "nerf_mlp_layers": "10",
+        "nerf_mlp_hidden_dimension": "64",
+        "sample_points_per_ray": "128"
+      },
+      "observation": "The model encoded four posed images into pose-aware tokens, cross-attended from triplane tokens to image tokens, produced 64 x 64 triplanes, and decoded density and RGB via volume rendering.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] The reconstructor needed generic object priors and robustness to camera variation, not just the fixed four views used by the generator. [Gap] Training only on input views could leave unseen regions unconstrained and produce poor geometry. [Decision] They trained the reconstructor end-to-end on all rendered Objaverse objects using random input and supervision views, with both L2/MSE-style reconstruction loss and perceptual LPIPS loss.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Objaverse NeRF volume-rendering training with L2 and LPIPS losses",
+        "version": ""
+      },
+      "parameters": {
+        "training_objects": "about 750K Objaverse objects",
+        "rendered_views_per_object": "32 random views",
+        "input_views_per_step": "4",
+        "supervision_views_per_step": "4",
+        "rendering_resolution": "128 x 128 pixels",
+        "image_resize_before_crop": "uniformly sampled from 128 to 384 pixels",
+        "crop_size": "128 x 128 pixels",
+        "losses": "L2 loss weight 1; LPIPS loss weight 2",
+        "optimizer": "AdamW",
+        "peak_learning_rate": "4e-4",
+        "warmup": "3K steps",
+        "schedule": "cosine decay",
+        "beta2": "0.95",
+        "weight_decay": "0.05 for non-bias and non-layernorm parameters",
+        "gradient_clipping": "1",
+        "training_epochs": "120",
+        "batch_size": "1024",
+        "num_gpus": "128 NVIDIA A100",
+        "training_time": "7 days",
+        "efficiency_tools": "flash attention, bf16 mixed precision, gradient checkpointing"
+      },
+      "observation": "The trained reconstructor could infer a triplane-based NeRF from 4 input images and render novel views. Novel-view supervision was later shown to be critical for avoiding floaters in regions not covered by the four input views.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] The main claim required showing that Instant3D was not only fast but also aligned with text prompts and visually competitive with optimization-based systems. [Gap] Qualitative results alone were insufficient, and runtime needed direct comparison with Shap-E, DreamFusion, and ProlificDreamer. [Decision] They evaluated 400 DreamFusion prompts using CLIP scores computed over 10 random rendered views per generated 3D asset and measured inference time on an A100 GPU.",
+      "action": "analysis",
+      "tool": {
+        "name": "CLIP-score text-to-3D benchmark",
+        "version": "ViT-L/14 and ViT-bigG-14"
+      },
+      "parameters": {
+        "num_prompts": "400",
+        "rendered_views_per_asset": "10 random views",
+        "baselines": "Shap-E, DreamFusion, ProlificDreamer",
+        "hardware_for_timing": "NVIDIA A100 GPU",
+        "instant3d_ddim_steps": "100"
+      },
+      "observation": "Instant3D achieved CLIP scores of 26.87 with ViT-L/14 and 41.77 with ViT-bigG-14 in 20 s. Shap-E scored 20.51 and 32.21 in 6 s; DreamFusion scored 23.60 and 37.46 in 5400 s; ProlificDreamer scored 27.39 and 42.98 in 36000 s. Instant3D was 270x faster than DreamFusion and 1800x faster than ProlificDreamer while scoring close to ProlificDreamer and above Shap-E and DreamFusion.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] The second stage needed to be validated independently from text-to-image generation, because reconstruction quality could be a bottleneck. [Gap] Prior sparse-view reconstruction methods might fail with only four wide-baseline input views. [Decision] They compared their reconstructor against SparseNeus on the Google Scanned Objects dataset using four structured input views for their method and an expanded eight-view input for SparseNeus.",
+      "action": "analysis",
+      "tool": {
+        "name": "GSO sparse-view reconstruction benchmark",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "Google Scanned Objects",
+        "num_objects": "1019",
+        "ours_input_views": "4",
+        "sparsen eus_input_views": "8",
+        "test_views_per_object": "10 random views in main comparison",
+        "metrics": "PSNR, SSIM, LPIPS"
+      },
+      "observation": "Instant3D's reconstructor achieved PSNR 26.54, SSIM 0.8934, and LPIPS 0.0643, outperforming SparseNeus, which achieved PSNR 20.62, SSIM 0.8360, and LPIPS 0.1989 despite using more input views.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] The final system depended on multiple design choices: SDXL versus SD1.5, curated versus random data, dataset size, fine-tuning steps, Gaussian blob initialization, reconstruction losses, rendering resolution, and novel-view supervision. [Gap] The authors needed to identify which choices were responsible for quality and which caused degradation. [Decision] They ran ablations on sparse-view generation and sparse-view reconstruction, reporting CLIP scores for generator settings and PSNR/SSIM/LPIPS for reconstructor variants.",
+      "action": "analysis",
+      "tool": {
+        "name": "Ablation studies for sparse-view generation and reconstruction",
+        "version": ""
+      },
+      "parameters": {
+        "generation_ablation_factors": "base model, #data, curated versus random data, #fine-tuning steps",
+        "reconstruction_ablation_factors": "#image-to-triplane layers, rendering resolution, LPIPS loss, novel-view supervision",
+        "generation_metric": "CLIP scores on reconstructed NeRF renderings",
+        "reconstruction_metrics": "PSNR, SSIM, LPIPS on GSO"
+      },
+      "observation": "The final SDXL 10K curated data and 10K-step setup scored 26.87 ViT-L/14 and 41.77 ViT-bigG-14. SD1.5 variants scored lower, e.g. 23.50/36.90 for 10K data and 10K steps. Too little data such as 1K caused view inconsistency; too much data such as 100K biased the model toward the fine-tuning dataset. For reconstruction, removing novel-view supervision dropped performance to PSNR 18.2359, SSIM 0.8103, LPIPS 0.2256; removing LPIPS increased PSNR slightly to 24.1699 but worsened LPIPS to 0.1934 and caused blurrier images.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The final system was validated by qualitative comparisons, CLIP-based text-to-3D alignment on 400 DreamFusion prompts using 10 random rendered views per asset, inference-time measurement on an A100 GPU, sparse-view reconstruction benchmarking on 1019 Google Scanned Objects with PSNR/SSIM/LPIPS, and ablation studies of generation and reconstruction design choices.",
+    "metrics": {
+      "Instant3D_CLIP_ViT-L14": {
+        "value": "26.87",
+        "unit": "CLIP score",
+        "interpretation": "Higher than Shap-E 20.51 and DreamFusion 23.60, close to ProlificDreamer 27.39, indicating strong text-3D alignment."
+      },
+      "Instant3D_CLIP_ViT-bigG-14": {
+        "value": "41.77",
+        "unit": "CLIP score",
+        "interpretation": "Higher than Shap-E 32.21 and DreamFusion 37.46, close to ProlificDreamer 42.98."
+      },
+      "Instant3D_inference_time": {
+        "value": "20",
+        "unit": "seconds per 3D asset",
+        "interpretation": "Feed-forward runtime for generating a NeRF asset, much faster than optimization-based baselines."
+      },
+      "speedup_vs_DreamFusion": {
+        "value": "270",
+        "unit": "x",
+        "interpretation": "Instant3D's 20 s runtime compared with DreamFusion's 5400 s runtime."
+      },
+      "speedup_vs_ProlificDreamer": {
+        "value": "1800",
+        "unit": "x",
+        "interpretation": "Instant3D's 20 s runtime compared with ProlificDreamer's 36000 s runtime."
+      },
+      "GSO_reconstruction_PSNR": {
+        "value": "26.54",
+        "unit": "dB",
+        "interpretation": "Novel-view reconstruction quality on GSO, substantially above SparseNeus at 20.62."
+      },
+      "GSO_reconstruction_SSIM": {
+        "value": "0.8934",
+        "unit": "unitless",
+        "interpretation": "Structural similarity on GSO novel views, above SparseNeus at 0.8360."
+      },
+      "GSO_reconstruction_LPIPS": {
+        "value": "0.0643",
+        "unit": "unitless",
+        "interpretation": "Perceptual reconstruction error on GSO novel views, lower and better than SparseNeus at 0.1989."
+      }
+    },
+    "final_verdict": "The original goal was met. Instant3D generated text-conditioned NeRF assets in about 20 seconds, exceeding the targeted order-of-magnitude speed improvement over optimization-based methods and achieving 270x speedup over DreamFusion and 1800x over ProlificDreamer. Its CLIP alignment was better than Shap-E and DreamFusion and competitive with ProlificDreamer, while the dedicated sparse-view reconstructor outperformed SparseNeus on GSO from fewer input views. The paper still reports remaining limitations in photorealism, complex prompt handling, multi-view consistency, and texture sharpness."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 2,
+      "what_failed": "Naively using all rendered Objaverse data for SDXL fine-tuning reduced photorealism and 3D asset quality.",
+      "diagnosis": "A large fraction of Objaverse contains simple shapes and simple textures; without curation, these data bias the model toward over-denoising and flat, cartoon-like textures.",
+      "correction": "The authors trained a CLIP-feature SVM quality scorer on 2000 manually labeled samples and selected the top 10K objects for the sparse-view generator fine-tuning."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Standard inference from random Gaussian noise produced generated multi-view images with cluttered backgrounds.",
+      "diagnosis": "The fine-tuning distribution had centered objects on clean white backgrounds, but pure Gaussian initialization could drift away from that spatial/background structure.",
+      "correction": "They introduced Gaussian blob initialization: a white 2 x 2 grid with a centered Gaussian blob in each quadrant, noised at the starting diffusion timestep, to guide clean-background generation."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Fine-tuning on too little data, such as 1K samples, disrupted view consistency and caused incorrect geometry after reconstruction.",
+      "diagnosis": "The model did not receive enough multi-view grid examples to reliably learn consistent four-view generation.",
+      "correction": "The final setup used 10K curated training examples, which balanced view consistency and preservation of SDXL's original generation capabilities."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Fine-tuning on too much data, such as 100K samples, harmed compositionality, photorealism, and text alignment.",
+      "diagnosis": "The diffusion model became biased toward the fine-tuning dataset and lost some of the broad text-image generation ability inherited from SDXL.",
+      "correction": "The authors selected 10K curated data rather than scaling to 100K or all data for the final sparse-view generator."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "The number of fine-tuning steps did not improve monotonically: 4K steps caused inconsistent four-view generation and 20K steps degraded quality by biasing toward the fine-tuning data.",
+      "diagnosis": "Too few steps under-adapted the model to the multi-view format, while too many steps over-adapted it and damaged general text-image capabilities.",
+      "correction": "The authors used the mid-point setting of 10K fine-tuning steps for the final SDXL model."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Removing novel-view supervision in reconstructor training caused large metric drops and visual artifacts.",
+      "diagnosis": "Four input views have insufficient coverage; supervising only the input views left unseen regions unconstrained, leading to floaters in regions not covered by the inputs.",
+      "correction": "The final reconstructor sampled separate random supervision views and trained with novel-view reconstruction loss."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Training the reconstructor without LPIPS made rendered images blurrier despite a slight PSNR/SSIM improvement.",
+      "diagnosis": "Pixel losses alone favored over-smoothed reconstructions; LPIPS aligned better with human perception and texture sharpness.",
+      "correction": "The final model combined L2 loss with LPIPS loss using weights 1 and 2 respectively."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Reported final limitations include failures on over-complicated prompts, complex spatial arrangements, exact quantities, complex structures, and missing important prompt concepts.",
+      "diagnosis": "The authors attribute these failures to imperfect preservation of SDXL's text understanding during fine-tuning and the difficulty of generating multi-view images without explicit 3D inductive bias.",
+      "correction": "The paper notes these as limitations and future work; no complete correction is provided."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "The final reconstructor can produce blurrier textures than the input images.",
+      "diagnosis": "The authors attribute this to the relatively low-resolution triplane representation.",
+      "correction": "No full correction is implemented in the paper; it is reported as a limitation."
+    }
+  ]
+}

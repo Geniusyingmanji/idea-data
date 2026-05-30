@@ -1,0 +1,241 @@
+{
+  "paper_id": "paper:filling_gaps_in_trustworthy_development_of_ai:2021",
+  "title": "Filling gaps in trustworthy development of AI",
+  "year": 2021,
+  "domain": "medicine",
+  "venue": "Science",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/1864_bef75c63227844c3b6feebc7aa74ce5be32ff614/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "A set of concrete mechanisms for verifying the trustworthiness of organizations developing AI systems",
+    "input_data": "Existing AI ethics principles adopted or published by over 80 organizations as of a 2019 study; prior interdisciplinary report by Brundage et al. with 59 authors; examples and literature on red teaming, audit trails, interpretability, privacy-preserving machine learning, third-party auditing, bias and safety bounties, and AI incident databases",
+    "user_intent": "To close the gap between high-level AI ethics principles and practical, verifiable behavior by AI developers, because vague principles have allowed questionable or ethically dubious behavior and weakened public trust in AI systems and developers",
+    "quantifiable_goal": "Identify a concrete package of 7 mechanisms that can help AI developers prevent harm and allow external actors and users to assess developer trustworthiness; no experimental performance threshold was stated"
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Many organizations have adopted AI ethics principles, with a 2019 study finding over 80 organizations publishing or adopting such principles. Common themes include safety, security, misuse prevention, privacy, fairness, explainability, reproducibility, and accountability. [Gap] These principles often leave a gap between what trustworthy AI should achieve and how developers can demonstrate it through verifiable behavior. [Decision] Frame the paper around mechanisms that translate principles into observable practices and information flows about developer trustworthiness.",
+      "action": "analysis",
+      "tool": {
+        "name": "AI ethics principles synthesis",
+        "version": ""
+      },
+      "parameters": {
+        "source_count": "over 80 organizations in 2019 study",
+        "principle_themes": "safety, security, misuse prevention, privacy, fairness, interpretability, explainability, reproducibility, accountability"
+      },
+      "observation": "The authors identified a trustworthiness verification gap: users and external actors often lack reliable evidence about whether AI developers follow their stated principles.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Cybersecurity uses red teams to view systems from an adversary perspective and identify exploitable vulnerabilities before harms occur. Some AI developers, mainly large industry and government labs, already use AI red teams. [Gap] AI red-teaming expertise is not yet widely shared across organizations and domains, and AI systems require new expertise beyond traditional cybersecurity. [Decision] Propose AI red-team exercises and a broader AI red-team expert community, potentially involving independent third parties to reduce antitrust concerns.",
+      "action": "design",
+      "tool": {
+        "name": "AI red-team exercises",
+        "version": ""
+      },
+      "parameters": {
+        "target_risks": "misuse and novel vulnerabilities",
+        "deployment_model": "internal teams or independent third-party red teams",
+        "information_sharing": "cross-organization and cross-domain expert community"
+      },
+      "observation": "Red teaming was proposed as a mechanism for identifying exploitable AI vulnerabilities before deployment and for generating shared expertise, but the paper notes that such exchange is not currently commonplace.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] External audits require records of how systems were developed, what data were used, and what assessments were performed. Other safety-critical domains already have information-retention standards. [Gap] Comparable standards and logging mechanisms do not yet cover the range of AI applications, though domain-specific efforts such as automated vehicle standardization exist. [Decision] Recommend audit trails based on documentation of development processes, system makeup, data provenance, and benefit-risk assessments.",
+      "action": "design",
+      "tool": {
+        "name": "Audit trails and AI development documentation",
+        "version": ""
+      },
+      "parameters": {
+        "records_to_retain": "data provenance, development process, system makeup, system activities, benefit and risk assessments before deployment",
+        "example_frameworks": "Rolls-Royce Aletheia Framework, Machine Intelligence Garage Ethics Framework, ABOUT ML, Model Cards",
+        "standardization_requirement": "widely accessible and free standards"
+      },
+      "observation": "The authors found early progress in ethics frameworks, model documentation guidelines, and proposals for continuous monitoring and logging, but concluded that collective work is needed to create broadly usable audit-trail standards.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] The black-box nature of many AI systems impedes assurance of safety, accountability, and fairness. Interpretability and explainability research has developed approaches such as human-readable rules and saliency or attribution methods. [Gap] General explainability methods do not yet reliably translate into verifiable practice for ethical and safety goals, and explanations can be misleading if they are not faithful to the model. [Decision] Recommend domain-specific interpretability criteria, tests for compliance with those criteria, and identification of domains requiring highly interpretable performant models.",
+      "action": "analysis",
+      "tool": {
+        "name": "Interpretability and explainability standards",
+        "version": ""
+      },
+      "parameters": {
+        "principles": "sufficient insight for end-users, faithfulness to model behavior, prevention of misleading explanations",
+        "target_use_cases": "accidents, systemic biases, population-level differences in predictions",
+        "complementary_mechanism": "reproducibility through external recreation and interrogation of AI systems"
+      },
+      "observation": "The authors concluded that interpretability research is growing but should be redirected toward ethical and safety concerns, with common standards and tests needed to make interpretability verifiable.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Privacy concerns in machine learning include unauthorized access to training data, inference of sensitive information from trained models, and unauthorized access to trained models. Existing PPML methods include federated learning, differential privacy, and encrypted computation. [Gap] PPML methods involve trade-offs in ease of development and training efficiency, and still lack standard software libraries and broad awareness among AI developers. [Decision] Recommend support for active PPML projects, open standards, algorithm benchmarks, and educational resources.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Privacy-preserving machine learning review",
+        "version": ""
+      },
+      "parameters": {
+        "techniques": "federated learning, differential privacy, encrypted computation",
+        "open_source_projects": "PyTorch Opacus, TensorFlow Privacy, FedAI, PySyft, Flower, OpenFL",
+        "adoption_needs": "reliable project support, open standards, algorithm benchmarks, educational resources"
+      },
+      "observation": "The paper identified PPML as a concrete privacy mechanism and noted growth in open-source projects extending PPML to existing ML frameworks, while emphasizing that adoption remains limited by tooling and awareness.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] For best practices to create trust, developers must both follow them and be seen to follow them. However, developers may be unable to share sensitive information publicly, such as private user data. [Gap] Public self-attestation is insufficient, and direct disclosure can be blocked by privacy, proprietary, or antitrust constraints. [Decision] Propose third-party auditing, where trusted auditors access restricted information and either verify developer claims or release anonymized or aggregated results.",
+      "action": "design",
+      "tool": {
+        "name": "Third-party auditing",
+        "version": ""
+      },
+      "parameters": {
+        "audit_components": "proactive independent risk assessment, standardized audit trails, independent assessment of adherence to guidelines and regulations",
+        "information_controls": "restricted access, anonymized release, aggregated release",
+        "technical_support": "secure multiparty computation for claim verification without direct access to sensitive information"
+      },
+      "observation": "The authors identified third-party auditing as a central mechanism for converting internal developer information into externally credible evidence, but stressed that auditing only works if auditors are themselves trusted and failures have meaningful consequences.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] In cybersecurity, bug bounties and responsible disclosure reward external researchers for finding flaws while giving companies time to fix vulnerabilities. AI systems can similarly contain bias and safety vulnerabilities that evade pre-release detection. [Gap] Much current knowledge about AI harms comes from academic researchers and investigative journalists with limited system access and often antagonistic relationships with developers. [Decision] Propose bias and safety bounties to reward external parties who identify harms in released AI systems.",
+      "action": "design",
+      "tool": {
+        "name": "Bias and safety bounty programs",
+        "version": ""
+      },
+      "parameters": {
+        "analogy": "cybersecurity bug bounties and responsible disclosure",
+        "target_harms": "bias, safety vulnerabilities, broader algorithmic system harms",
+        "examples": "Algorithmic Justice League Community Reporting of Algorithmic System Harms project; Twitter July bounty for image-cropping algorithm bias"
+      },
+      "observation": "The authors proposed bounty programs as a way to align incentives between AI developers and external researchers, while noting that such programs must not replace developers' own pre-release responsibility to find and address vulnerabilities.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] As AI systems are deployed, theoretical risks become real-world incidents that can inform research, development, regulation, and public trust. [Gap] Individual developers are disincentivized to report incidents in their own systems because of reputational harm, especially if competitors do not report comparable incidents, creating a collective-action problem. [Decision] Recommend AI incident sharing through regulation or voluntary anonymous disclosure to trusted third parties with secure and transparent reporting processes.",
+      "action": "design",
+      "tool": {
+        "name": "AI incident sharing",
+        "version": ""
+      },
+      "parameters": {
+        "sharing_modes": "regulatory requirement or voluntary anonymous disclosure",
+        "platform_requirements": "trusted third party, transparent collection and anonymization processes, accessible and secure portal",
+        "example_platform": "Partnership on AI AI Incident Database",
+        "taxonomy_example": "Center for Security and Emerging Technology taxonomy with specification, robustness, and assurance categories"
+      },
+      "observation": "The paper highlighted the AI Incident Database as an ongoing platform compiling incidents from public sources and developer reporting, and noted a taxonomy with over 100 incidents exemplifying each of three categories: specification, robustness, and assurance.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Each mechanism addresses a different part of the AI trustworthiness ecosystem: internal developer practice, external evaluation, or information sharing with users. [Gap] No single mechanism is sufficient, and a broader ecosystem with meaningful consequences and governance is still required. [Decision] Synthesize the mechanisms as mutually reinforcing information flows that allow external actors to evaluate developers and help users assess trustworthiness.",
+      "action": "reflection",
+      "tool": {
+        "name": "Trustworthiness ecosystem synthesis",
+        "version": ""
+      },
+      "parameters": {
+        "mechanism_count": "7",
+        "internal_process_mechanisms": "red teams, audit trails, interpretability and explainability, privacy-preserving machine learning",
+        "external_evaluation_mechanisms": "third-party auditing, bias and safety bounties, AI incident sharing",
+        "policy_example": "EU proposed AI regulation including incident-sharing, audit trails, and third-party auditors"
+      },
+      "observation": "The authors concluded that the proposed mechanisms provide concrete next steps for assessing AI developer trustworthiness and can support targeted regulation, but they did not empirically test the mechanisms in a deployed system.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Conceptual validation through literature synthesis, comparison with mechanisms used in cybersecurity and other safety-critical industries, and mapping of proposed mechanisms to gaps in AI ethics implementation; no empirical experiment, clinical validation, benchmark, or user study was reported",
+    "metrics": {
+      "mechanisms_proposed": {
+        "value": "7",
+        "unit": "mechanisms",
+        "interpretation": "The paper met its stated conceptual aim by identifying seven concrete mechanisms: red-team exercises, audit trails, interpretability and explainability, privacy-preserving machine learning, third-party auditing, bias and safety bounties, and AI incident sharing."
+      },
+      "organizations_with_ai_ethics_principles": {
+        "value": "over 80",
+        "unit": "organizations",
+        "interpretation": "This number supports the authors' diagnosis that ethics principles are widespread, but that practical mechanisms are still needed to bridge the gap between stated principles and verifiable trustworthy behavior."
+      },
+      "incident_taxonomy_categories": {
+        "value": "3",
+        "unit": "categories",
+        "interpretation": "The cited Center for Security and Emerging Technology taxonomy grouped AI incidents into specification, robustness, and assurance categories."
+      },
+      "incidents_per_taxonomy_category": {
+        "value": "over 100",
+        "unit": "incidents per category",
+        "interpretation": "The cited taxonomy had over 100 incidents exemplifying each category, supporting the relevance of incident-sharing infrastructure."
+      }
+    },
+    "final_verdict": "The original goal was partially met in a conceptual and policy-design sense: the authors produced a concrete set of seven mechanisms intended to help verify trustworthy AI development and linked them to existing examples, standards, and governance needs. However, the paper did not empirically validate that these mechanisms improve trustworthiness, reduce harms, or change developer behavior in practice."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 2,
+      "what_failed": "AI red-team experience is not commonly shared across organizations and domains.",
+      "diagnosis": "AI red teams currently exist mostly within large industry and government labs, and AI systems require new areas of expertise beyond traditional cybersecurity.",
+      "correction": "Form a broader community of AI red-team experts and use independent third-party red teaming where appropriate to enable information exchange and address antitrust concerns."
+    },
+    {
+      "step_index_ref": 3,
+      "what_failed": "Audit-trail standards and logging mechanisms for AI are underdeveloped.",
+      "diagnosis": "Although other safety-critical domains have information-retention standards, comparable standards have not yet been created for the wide range of AI applications.",
+      "correction": "Develop widely accessible and free standards for AI audit trails through collective, open, and participatory efforts."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "Interpretability and explainability methods do not yet reliably translate into verifiable ethical and safety practice.",
+      "diagnosis": "Explanations may fail to provide sufficient user insight, may not faithfully reflect model behavior, or may be misused to provide misleading accounts of system behavior.",
+      "correction": "Create domain-specific interpretability criteria, develop tests for compliance with those criteria, and build performant interpretable models in contexts requiring high interpretability."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Privacy-preserving machine learning has limited adoption among AI developers.",
+      "diagnosis": "PPML techniques still lack standard software libraries and broad developer awareness, and they introduce trade-offs in development ease and training efficiency.",
+      "correction": "Support active PPML projects, open standards, algorithm benchmarks, and educational resources."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Third-party auditing can fail to generate trust if auditors are not themselves trusted or if audit failures lack consequences.",
+      "diagnosis": "Auditing depends on auditor incentives, accurate reporting, protections for raising concerns, and meaningful consequences for failed audits.",
+      "correction": "Use reputational mechanisms, government backing, civil-society support, and protections for auditors who report concerns."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Bias and safety bounty programs could be misused as a substitute for developer responsibility.",
+      "diagnosis": "Bounties identify issues after release and do not remove the developer's duty to surface and address vulnerabilities and biases before product release.",
+      "correction": "Use bounties as a supplement to, not a replacement for, internal investment in pre-release safety and bias detection."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "AI incident sharing suffers from a collective-action problem.",
+      "diagnosis": "Developers are disincentivized to disclose incidents in their own systems because of reputational harm, especially when competitors may not disclose similar incidents.",
+      "correction": "Make incident sharing a regulatory requirement or incentivize voluntary anonymous disclosure through trusted third parties with secure, transparent reporting portals."
+    }
+  ]
+}

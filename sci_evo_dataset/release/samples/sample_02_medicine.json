@@ -1,0 +1,339 @@
+{
+  "paper_id": "paper:deepseek_r1_incentivizes_reasoning_in_llms_through_reinforce:2025",
+  "title": "DeepSeek-R1 incentivizes reasoning in LLMs through reinforcement learning",
+  "year": 2025,
+  "domain": "medicine",
+  "venue": "Nature",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/1563_2eed1fad9bbf887d4395de40f20144c4fafefd7f/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "DeepSeek-R1-Zero and DeepSeek-R1, large language models with enhanced reasoning capability induced primarily through reinforcement learning",
+    "input_data": "DeepSeek-V3-Base as the base checkpoint; verifiable mathematical, coding, and logical reasoning prompts with ground-truth answers or compiler/test-case verification; rule-based accuracy and format rewards; later, thousands of cold-start conversational reasoning examples, 66,000 helpfulness preference pairs, 106,000 safety prompts with safe/unsafe labels, reasoning and non-reasoning SFT data, and benchmark suites including AIME 2024, MATH-500, CNMO 2024, LiveCodeBench, Codeforces, GPQA Diamond, MMLU, MMLU-Pro, IF-Eval, AlpacaEval 2.0, ArenaHard, SWE-Bench Verified, Aider-Polyglot, SimpleQA, C-SimpleQA, C-Eval, CMMLU, CLUEWSC, DROP, and FRAMES",
+    "user_intent": "To overcome the scalability and bias limitations of chain-of-thought prompting and supervised fine-tuning on human-annotated reasoning traces by testing whether LLM reasoning can self-evolve under reliable reinforcement-learning rewards, while later improving readability, language consistency, helpfulness, harmlessness, and general instruction-following",
+    "quantifiable_goal": "Improve verifiable reasoning performance from the DeepSeek-V3-Base-derived initial AIME 2024 pass@1 level of 15.6% to frontier-level performance, surpassing the average human AIME competitor baseline; maintain or improve broad benchmark performance, including math, code, STEM, instruction-following, and preference benchmarks"
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Prior LLM reasoning improvements relied heavily on chain-of-thought prompting, supervised fine-tuning, or human-annotated multi-step demonstrations. [Gap] These methods scale poorly, introduce human cognitive biases, and may cap model exploration at human-provided reasoning patterns. [Decision] The authors chose to test whether reasoning could be incentivized directly from a base model through reinforcement learning using only final-answer correctness and minimal formatting constraints.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Review of chain-of-thought prompting, supervised fine-tuning, PPO-style RLHF, and prior reasoning methods",
+        "version": ""
+      },
+      "parameters": {
+        "base_model_selected": "DeepSeek-V3-Base",
+        "human_reasoning_trajectory_use": "bypassed before RL for DeepSeek-R1-Zero"
+      },
+      "observation": "The paper framed pure RL on verifiable tasks as a way to avoid reliance on human-labeled reasoning trajectories and allow non-human-like reasoning strategies to emerge.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] PPO is widely used for LLM RL but is resource-intensive, and neural reward models can be vulnerable to reward hacking during large-scale RL. [Gap] The authors needed a scalable RL method and reliable reward signal for reasoning tasks. [Decision] They adopted Group Relative Policy Optimization and designed rule-based rewards that combine final-answer correctness with a required answer format.",
+      "action": "design",
+      "tool": {
+        "name": "Group Relative Policy Optimization",
+        "version": ""
+      },
+      "parameters": {
+        "reward_rule": "Reward_rule = Reward_acc + Reward_format",
+        "accuracy_reward": "rule-based final-answer correctness for math; compiler/test-case verification for coding",
+        "format_reward": "reasoning enclosed in <think>...</think> and final answer enclosed in <answer>...</answer>",
+        "neural_reward_models_for_reasoning": "not used"
+      },
+      "observation": "A rule-based reward system was defined for mathematical, coding, and logical reasoning domains, with accuracy and format rewards combined with the same weight.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] DeepSeek-V3-Base was expected to contain latent reasoning potential from pretraining. [Gap] It was unknown whether this potential could be unlocked without supervised reasoning data. [Decision] The authors trained DeepSeek-R1-Zero directly with GRPO on reasoning prompts, using large rollouts and periodic reference-model replacement.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "GRPO training for DeepSeek-R1-Zero",
+        "version": ""
+      },
+      "parameters": {
+        "learning_rate": "3e-6",
+        "KL_coefficient": "0.001",
+        "sampling_temperature": "1",
+        "outputs_per_question": "16",
+        "max_length_before_8.2k_steps": "32,768 tokens",
+        "max_length_after_8.2k_steps": "65,536 tokens",
+        "total_training_steps": "10,400",
+        "training_epochs": "1.6",
+        "unique_questions_per_step": "32",
+        "training_batch_size": "512",
+        "rollout_outputs_per_iteration": "8,192",
+        "mini_batches_per_rollout": "16",
+        "inner_epochs": "1",
+        "reference_model_update_interval": "400 steps"
+      },
+      "observation": "DeepSeek-R1-Zero was trained exclusively with reinforcement learning and no supervised fine-tuning stage before RL. At the 8.2k-step length increase, both performance and response length showed a significant jump.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] The RL setup provided only correctness and format incentives, not explicit instruction to reflect or verify. [Gap] The authors needed to determine whether reasoning behaviors actually emerged during training. [Decision] They tracked benchmark accuracy, response length, and qualitative reasoning patterns during the RL process.",
+      "action": "analysis",
+      "tool": {
+        "name": "AIME 2024 evaluation and response-length tracking",
+        "version": ""
+      },
+      "parameters": {
+        "benchmark": "AIME 2024",
+        "decoding_extra": "self-consistency decoding for one reported result",
+        "training_curve_interval": "reported across RL training"
+      },
+      "observation": "DeepSeek-R1-Zero improved on AIME 2024 from 15.6% pass@1 to 77.9% pass@1, and to 86.7% accuracy with self-consistency decoding. Average response length increased steadily during training. The model developed reflective reasoning, systematic exploration of alternatives, and an 'aha moment' marked by increased use of words such as 'wait'.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] DeepSeek-R1-Zero achieved strong reasoning performance. [Gap] Its outputs showed poor readability, language mixing between English and Chinese, and limited performance on broader writing and open-domain question-answering tasks because training focused narrowly on rule-verifiable reasoning. [Decision] The authors designed a multi-stage DeepSeek-R1 pipeline adding cold-start data, language-consistency reward, rejection sampling, SFT, and a second RL stage.",
+      "action": "reflection",
+      "tool": {
+        "name": "Error analysis of DeepSeek-R1-Zero behavior",
+        "version": ""
+      },
+      "parameters": {
+        "identified_issues": "poor readability; English-Chinese language mixing; limited broader writing and open-domain QA ability",
+        "planned_model": "DeepSeek-R1"
+      },
+      "observation": "The authors concluded that strong pure-RL reasoning alone was insufficient for aligned, readable, general-purpose assistant behavior.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Cold-start human-aligned reasoning examples could improve readability and format before further RL. [Gap] The model also needed to reduce language mixing during chain-of-thought generation. [Decision] The authors collected thousands of cold-start examples and applied a first RL stage with a language-consistency reward added to the final reward.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "First DeepSeek-R1 RL stage with language consistency reward",
+        "version": ""
+      },
+      "parameters": {
+        "cold_start_data_size": "thousands of examples",
+        "learning_rate": "3e-6",
+        "KL_coefficient": "0.001",
+        "GRPO_clip_ratio_epsilon": "10",
+        "sampling_temperature": "1",
+        "outputs_per_question": "16",
+        "max_length": "32,768 tokens",
+        "unique_questions_per_step": "32",
+        "training_batch_size": "512",
+        "reference_model_update_interval": "400 steps",
+        "language_reward": "Num(Words_target) / Num(Words)"
+      },
+      "observation": "DeepSeek-R1 Dev1 showed substantial improvement in instruction-following relative to DeepSeek-R1-Zero: IF-Eval Prompt Strict increased from 46.6 to 71.7 and ArenaHard increased from 53.6 to 77.0. However, reasoning degraded on some benchmarks, including AIME 2024 pass@1 decreasing from 77.9 to 59.0.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Rule-based rewards worked for verifiable reasoning but not for nuanced general helpfulness and safety. [Gap] The final assistant needed broader human-preference alignment without interfering excessively with the reasoning process. [Decision] The authors trained model-based helpfulness and safety reward models using curated preference and safety datasets.",
+      "action": "design",
+      "tool": {
+        "name": "DeepSeek-R1 helpfulness and safety reward models",
+        "version": ""
+      },
+      "parameters": {
+        "helpfulness_pairs": "66,000 preference pairs",
+        "helpfulness_judgments_per_pair": "4 DeepSeek-V3 judgments with randomized Response A/B positions",
+        "helpfulness_pair_filter": "retained only pairs with score difference Delta > 1",
+        "safety_prompts": "106,000 prompts with model-generated responses labeled safe or unsafe",
+        "reward_model_batch_size": "256",
+        "reward_model_learning_rate": "6e-6",
+        "reward_model_epochs": "1",
+        "max_sequence_length_training": "8,192 tokens",
+        "reward_model_inference_length_limit": "no explicit limit"
+      },
+      "observation": "A pairwise helpfulness reward model and point-wise safety reward model were built. Helpfulness assessment focused on the final summary, while harmlessness assessed the full response including reasoning and summary.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] The first RL stage improved alignment but did not fully restore or extend reasoning capability. [Gap] The model needed both strong reasoning and general-language competence. [Decision] The authors applied rejection sampling and supervised fine-tuning using reasoning data and then incorporated non-reasoning and code-engineering data to produce intermediate checkpoints Dev2 and Dev3.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Rejection sampling and supervised fine-tuning",
+        "version": ""
+      },
+      "parameters": {
+        "data_types": "reasoning datasets; non-reasoning datasets; code engineering datasets",
+        "pipeline_checkpoints": "DeepSeek-R1 Dev2 and DeepSeek-R1 Dev3"
+      },
+      "observation": "DeepSeek-R1 Dev2 improved advanced reasoning benchmarks relative to Dev1, including AIME 2024 pass@1 from 59.0 to 74.0, LiveCodeBench pass@1-CoT from 57.5 to 63.5, Codeforces rating from 1534 to 1687, and MMLU-Pro EM from 74.1 to 83.8. DeepSeek-R1 Dev3 improved general and engineering-oriented performance, including AlpacaEval 2.0 LC-winrate from 55.8 to 62.1 and Aider-Polyglot accuracy from 25.6 to 44.8.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Dev3 combined reasoning and general SFT data but still needed final reinforcement learning for helpfulness, harmlessness, language consistency, and reasoning refinement. [Gap] Long model-based preference RL could cause reward hacking, and high sampling temperature could make outputs incoherent. [Decision] The authors ran a second RL stage with mixed rule-based reasoning rewards, model-based general rewards, format rewards, and language rewards, lowering rollout temperature and limiting general preference-RL exposure.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Second DeepSeek-R1 GRPO reinforcement-learning stage",
+        "version": ""
+      },
+      "parameters": {
+        "reward_formula": "Reward = Reward_reasoning + Reward_general + Reward_language",
+        "reasoning_reward": "rule-based reward",
+        "general_reward": "reward_model reward + format reward",
+        "sampling_temperature": "0.7",
+        "total_training_steps": "1,700",
+        "general_instruction_and_preference_rewards": "incorporated exclusively in final 400 steps"
+      },
+      "observation": "The final DeepSeek-R1 achieved marginal further gains on code and mathematics benchmarks and large gains on user-preference benchmarks. Compared with Dev3, AlpacaEval 2.0 improved from 62.1 to 87.6 and ArenaHard improved from 75.6 to 92.3.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] The final model needed validation across reasoning, code, knowledge, instruction-following, preference, Chinese, and safety tasks. [Gap] A single reasoning benchmark could not establish broad success or expose remaining limitations. [Decision] The authors evaluated DeepSeek-R1 on a broad benchmark suite and conducted safety evaluations.",
+      "action": "analysis",
+      "tool": {
+        "name": "Multi-benchmark evaluation suite and safety evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "benchmarks": "MMLU, MMLU-Redux, MMLU-Pro, DROP, IF-Eval, GPQA Diamond, SimpleQA, FRAMES, AlpacaEval 2.0, ArenaHard, LiveCodeBench, Codeforces, SWE-Bench Verified, Aider-Polyglot, AIME 2024, MATH-500, CNMO 2024, CLUEWSC, C-Eval, C-SimpleQA",
+        "statistical_note": "Table 3 bold values denote statistical significance by t-test with p < 0.01"
+      },
+      "observation": "Final DeepSeek-R1 achieved AIME 2024 pass@1 79.8, MATH-500 pass@1 97.3, CNMO 2024 pass@1 78.8, LiveCodeBench pass@1-CoT 65.9, Codeforces percentile 96.3, Codeforces rating 2029, SWE-Bench Verified resolved 49.2, Aider-Polyglot accuracy 53.3, MMLU EM 90.8, MMLU-Pro EM 84.0, IF-Eval Prompt Strict 83.3, AlpacaEval 2.0 LC-winrate 87.6, and ArenaHard 92.3. Safety analysis concluded the inherent safety level was moderate, comparable to GPT-4o 2024-05-13, and could be elevated with a risk-control system.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Training-curve analysis on AIME 2024 for DeepSeek-R1-Zero; final multi-benchmark evaluation of DeepSeek-R1 across math, code, STEM, instruction-following, preference, Chinese, factuality, and software-engineering benchmarks; qualitative analysis of emergent reflection/self-verification; safety benchmarking",
+    "metrics": {
+      "DeepSeek-R1-Zero_AIME_2024_initial_pass@1": {
+        "value": "15.6",
+        "unit": "%",
+        "interpretation": "Initial AIME 2024 pass@1 before RL improvement"
+      },
+      "DeepSeek-R1-Zero_AIME_2024_final_pass@1": {
+        "value": "77.9",
+        "unit": "%",
+        "interpretation": "Pure RL substantially improved mathematical reasoning and surpassed the average human competitor baseline reported in the paper"
+      },
+      "DeepSeek-R1-Zero_AIME_2024_self_consistency_accuracy": {
+        "value": "86.7",
+        "unit": "%",
+        "interpretation": "Self-consistency decoding further improved DeepSeek-R1-Zero accuracy"
+      },
+      "DeepSeek-R1_AIME_2024_pass@1": {
+        "value": "79.8",
+        "unit": "%",
+        "interpretation": "Final DeepSeek-R1 maintained strong mathematical reasoning after alignment stages"
+      },
+      "DeepSeek-R1_MATH-500_pass@1": {
+        "value": "97.3",
+        "unit": "%",
+        "interpretation": "High accuracy on mathematical problem solving"
+      },
+      "DeepSeek-R1_CNMO_2024_pass@1": {
+        "value": "78.8",
+        "unit": "%",
+        "interpretation": "Strong performance on Chinese National High School Mathematics Olympiad problems"
+      },
+      "DeepSeek-R1_LiveCodeBench_pass@1_CoT": {
+        "value": "65.9",
+        "unit": "%",
+        "interpretation": "Strong coding-reasoning performance on contamination-resistant live coding tasks"
+      },
+      "DeepSeek-R1_Codeforces_percentile": {
+        "value": "96.3",
+        "unit": "percentile",
+        "interpretation": "Competitive programming performance near the top of the Codeforces distribution"
+      },
+      "DeepSeek-R1_Codeforces_rating": {
+        "value": "2029",
+        "unit": "rating",
+        "interpretation": "High competitive programming rating achieved by the final model"
+      },
+      "DeepSeek-R1_IF-Eval_prompt_strict": {
+        "value": "83.3",
+        "unit": "%",
+        "interpretation": "Improved instruction-following after the multi-stage DeepSeek-R1 pipeline"
+      },
+      "DeepSeek-R1_AlpacaEval2_LC_winrate": {
+        "value": "87.6",
+        "unit": "%",
+        "interpretation": "Large improvement in general preference-oriented generation quality"
+      },
+      "DeepSeek-R1_ArenaHard": {
+        "value": "92.3",
+        "unit": "score",
+        "interpretation": "High performance on a GPT-4-1106-judged arena-style preference benchmark"
+      },
+      "DeepSeek-R1_SWE-Bench_Verified_resolved": {
+        "value": "49.2",
+        "unit": "%",
+        "interpretation": "Software-engineering task resolution rate, with authors noting less improvement than desired because large-scale RL was not extensively applied to software engineering"
+      }
+    },
+    "final_verdict": "The original goal was met for verifiable reasoning: pure RL raised DeepSeek-R1-Zero AIME 2024 pass@1 from 15.6% to 77.9%, with 86.7% under self-consistency, and the final DeepSeek-R1 retained or improved strong reasoning while substantially improving instruction-following and preference benchmarks. The goal was only partially met for general robustness and deployment readiness because the paper reports remaining limitations in structured output, tool use, token efficiency, language mixing outside Chinese and English, prompt sensitivity, software-engineering RL efficiency, and reward hacking for model-based rewards."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 5,
+      "what_failed": "DeepSeek-R1-Zero had poor readability and language mixing, sometimes combining English and Chinese within a chain-of-thought response.",
+      "diagnosis": "DeepSeek-V3-Base was trained on multiple languages, especially English and Chinese, and pure rule-based reasoning RL did not directly optimize readability or language consistency.",
+      "correction": "The authors introduced cold-start conversational reasoning data and a language consistency reward defined as Num(Words_target) / Num(Words)."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "DeepSeek-R1-Zero had limited performance in broader areas such as writing and open-domain question answering.",
+      "diagnosis": "The rule-based RL stage focused narrowly on verifiable reasoning tasks such as mathematics, coding, and logical reasoning.",
+      "correction": "The authors added rejection sampling, supervised fine-tuning with reasoning and non-reasoning data, and a second RL stage with helpfulness and safety reward models."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "DeepSeek-R1 Dev1 degraded on some reasoning benchmarks relative to DeepSeek-R1-Zero, including AIME 2024 pass@1 dropping from 77.9 to 59.0.",
+      "diagnosis": "The paper attributes this partial degradation to the limited size of the cold-start dataset; it also notes that language alignment can slightly degrade model performance.",
+      "correction": "The authors proceeded with additional reasoning-oriented RL, rejection sampling, and SFT to produce Dev2, which improved AIME 2024 pass@1 to 74.0."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Higher sampling temperatures in the second RL stage led to incoherent generation.",
+      "diagnosis": "The authors found that higher temperatures during this stage destabilized output coherence.",
+      "correction": "They reduced the sampling temperature to 0.7 for the second RL stage."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "More training steps with model-based preference reward signals could lead to reward hacking.",
+      "diagnosis": "Model-based reward signals are more susceptible to exploitation than predefined rule-based verifiers as training progresses.",
+      "correction": "The authors incorporated general instruction data and preference-based rewards only in the final 400 steps of the 1,700-step second RL stage and noted robust reward models as future work."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "DeepSeek-R1 remained weaker in structured output and tool use than existing models.",
+      "diagnosis": "The model was not trained to leverage external tools such as search engines or calculators, and structural output capability was not the main target of the RL environment.",
+      "correction": "The authors proposed building RL environments for structured output and tool use in future versions."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "The model sometimes overthought simple questions and had suboptimal token efficiency.",
+      "diagnosis": "DeepSeek-R1 dynamically allocates more tokens for complex tasks, but excessive reasoning was still observed on simpler questions.",
+      "correction": "The authors identified token-efficiency optimization as future work."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Few-shot prompting degraded DeepSeek-R1 performance during evaluation.",
+      "diagnosis": "The model was sensitive to prompts, and few-shot prompting was empirically worse for this model.",
+      "correction": "The authors recommended zero-shot prompting: directly describe the problem and specify the output format."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "Large-scale RL was not extensively applied to software-engineering tasks, and DeepSeek-R1 did not show a huge improvement over DeepSeek-V3 on software-engineering benchmarks.",
+      "diagnosis": "Software-engineering evaluations have long evaluation times, reducing RL process efficiency.",
+      "correction": "The authors proposed rejection sampling on software-engineering data or asynchronous evaluations during RL in future versions."
+    }
+  ]
+}

@@ -1,0 +1,278 @@
+{
+  "paper_id": "paper:discovering_symbolic_models_from_deep_learning_with_inductiv:2020",
+  "title": "Discovering Symbolic Models from Deep Learning with Inductive Biases",
+  "year": 2020,
+  "domain": "physics",
+  "venue": "Neural Information Processing Systems",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/2697_643ac3ef063c77eb02a3d52637c11fe028bfae28/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "A general workflow for extracting closed-form symbolic physical models from trained graph neural networks, including rediscovered N-body force laws, rediscovered Hamiltonian terms, and a new analytic estimator for dark-matter-halo overdensity.",
+    "input_data": "Synthetic N-body particle simulations in 2D and 3D with 4 or 8 particles, masses, charges, positions, velocities, and accelerations under six known interaction laws: 1/r orbital force, 1/r^2 orbital force, charged-particle 1/r^2 force, damped springs with |r-1|^2 potential, discontinuous force -{0,r^2} rhat switching to 0 for r<2, and all-particle springs with (r-1)^2 potential. Cosmology data used the zeroth open-source N-body dark-matter simulation at the final time step, containing 215,854 halos with mass M_i, position r_i, velocity v_i, computed smoothed overdensity delta_i, and a graph with halos connected within 50 distance units, giving 30,437,218 directional edges and 71 neighbors per halo on average.",
+    "user_intent": "Traditional symbolic regression is difficult or intractable on high-dimensional data because the search scales exponentially with variables and operators, while deep neural networks fit high-dimensional physical data but are black-box and often extrapolate poorly. The authors aimed to factor high-dimensional problems with graph-network inductive biases and sparse latent messages so that symbolic regression could recover interpretable physical equations from internal learned functions.",
+    "quantifiable_goal": "Recover known force-law and Hamiltonian functional forms from learned graph-network components; make message vectors linearly correlate with true force components with R^2 close to 1 for suitable inductive biases; and discover a dark-matter overdensity formula with lower loss than the hand-designed estimator loss of 0.121, ideally approaching or improving on this baseline on test data."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Graph Networks have edge, node, and global functions that naturally match interacting-particle physics: pairwise messages resemble forces or interaction energies, message aggregation resembles net force or summed energy, and node/global updates resemble physical laws. [Gap] Generic neural components remain black boxes, and direct symbolic regression on all raw variables is combinatorially intractable. [Decision] Build the overall method around graph-network factorization, train the network end-to-end, then apply symbolic regression separately to learned internal functions phi^e, phi^v, and phi^u.",
+      "action": "design",
+      "tool": {
+        "name": "Graph Network inductive-bias framework",
+        "version": ""
+      },
+      "parameters": {
+        "internal_functions": "edge/message phi^e, node phi^v, global phi^u",
+        "symbolic_regression_targets": "distinct learned internal functions rather than full raw input-output map",
+        "symbolic_operators": "+, -, *, /, >, <, ^, exp, log, IF(.,.,.), real constants"
+      },
+      "observation": "The authors defined a four-stage framework: engineer a separable GN, train it on supervised data, fit symbolic expressions to its learned subfunctions, and substitute/refit the symbolic expressions to obtain an analytic model.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Newtonian pairwise forces should be representable as low-dimensional messages whose dimension equals spatial dimension. [Gap] Standard graph networks use high-dimensional latent messages and may encode forces in distributed, non-interpretable coordinates. [Decision] Train GNs on controlled N-body datasets using several message-size or sparsity strategies to test whether compact latent messages become interpretable as forces.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "PyTorch and PyTorch Geometric Graph Network trained with Adam",
+        "version": ""
+      },
+      "parameters": {
+        "datasets": "2D and 3D N-body simulations; 4 or 8 particles; six force laws",
+        "prediction_target": "instantaneous acceleration of every particle",
+        "loss": "mean absolute loss between predicted and true node acceleration",
+        "training_strategies": "Standard: 100 message components; Bottleneck: 2 or 3 message components; L1: 100 message components plus L1 message penalty; KL: 100 message components plus KL divergence to Gaussian prior",
+        "L1_regularization_weight": "1e-2"
+      },
+      "observation": "The L1-regularized GN had the greatest prediction performance in most Newtonian cases. The bottleneck model had the correct dimensionality but performed worse than L1 under limited training time.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] If compact messages encode forces, the highest-variance message components should be linear transformations of the true force-vector components. [Gap] The trained messages are in arbitrary learned coordinates, so direct physical interpretation requires quantitative alignment with true forces. [Decision] Select the D most significant message features, where D is the simulation dimension, and fit each to a linear combination of true force components.",
+      "action": "analysis",
+      "tool": {
+        "name": "Linear regression of message components against true force components",
+        "version": ""
+      },
+      "parameters": {
+        "feature_selection_standard_L1": "message components sorted by largest standard deviation",
+        "feature_selection_KL": "message component with largest mu^2 + sigma^2 - log(sigma^2)",
+        "metric": "R^2 of linear fit to true force components"
+      },
+      "observation": "Compact or sparsity-biased models produced messages highly correlated with true forces in many systems: r-1-2 Bottleneck R^2=1.000 and L1 R^2=1.000; r-1-3 Bottleneck R^2=1.000 and L1 R^2=1.000; r-2-2 Bottleneck R^2=0.993 and L1 R^2=0.990; Spring-2 Bottleneck R^2=1.000 and L1 R^2=1.000. Standard 100-dimensional messages often failed to align, e.g. r-1-2 Standard R^2=0.000 and r-1-3 Standard R^2=0.000.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] After sparsity or bottlenecking, the most significant learned message component phi_1^e behaves like a component of the pairwise force. [Gap] A numerical correlation with force is not yet an explicit physical law. [Decision] Sample learned message inputs and outputs, transform positions into interpretable variables such as displacements and distance, and run symbolic regression on phi_1^e.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "eureqa symbolic regression",
+        "version": ""
+      },
+      "parameters": {
+        "examples_per_test": "5000",
+        "inputs": "m1, m2, q1, q2, Delta x, Delta y, optional Delta z, r",
+        "target": "most significant message component phi_1^e",
+        "operators": "+, -, *, /, >, <, ^, exp, log, IF(.,.,.), real constants",
+        "objective": "minimize MAE",
+        "model_selection": "maximize -Delta log(MAE_c) / Delta c across complexity levels; ^, exp, log, and IF weighted as three times other operators in complexity"
+      },
+      "observation": "Symbolic regression recovered analytic forms equivalent to known simulated laws in several cases. For Spring 2D with L1, it recovered phi_1^e ≈ 1.36 Delta y + 0.60 Delta x - (0.60 Delta x + 1.37 Delta y)/r - 0.0025, matching a rotated component of (Delta x, Delta y)(r-1). For 1/r^2 3D Bottleneck, it recovered phi_1^e ≈ (0.021 Delta x m2 - 0.077 Delta y m2)/r^3. For the discontinuous 2D L1 system, it recovered phi_1^e ≈ IF(r>2, 0.15 r Delta y + 0.19 r Delta x, 0) - 0.038.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Many physical systems are more naturally described by a Hamiltonian scalar energy than by vector forces; dynamics follow derivatives of H with respect to q and p. [Gap] Standard HGNs can use high-dimensional summed encodings that are less directly interpretable as pairwise potentials. [Decision] Design and train a flattened Hamiltonian Graph Network whose global Hamiltonian is a sum of scalar pairwise interaction terms H_pair and per-particle self terms H_self, then symbolically regress these scalar terms.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Flattened Hamiltonian Graph Network",
+        "version": ""
+      },
+      "parameters": {
+        "training_data": "same Newtonian N-body datasets as force-law experiments",
+        "message_dimensionality": "1 scalar pairwise Hamiltonian term",
+        "global_model": "sum of H_pair over pairs plus H_self over particles",
+        "dynamics_computation": "partial derivatives of predicted H with respect to q and p"
+      },
+      "observation": "The FlatHGN required no additional sparsity regularization because the pairwise message was already scalar. Symbolic regression on the charged-particle simulation recovered H_pair ≈ 0.0019 q1 q2 / r, and in the appendix a fuller expression H_pair ≈ 0.0019 q1 q2/r - 0.0112 - 0.00143 q1 - 0.00112 q1 q2, consistent with the expected Coulomb potential up to terms depending only on non-dynamical parameters.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] The prior examples had known generating equations, but the method is intended for non-trivial scientific data with unknown laws. [Gap] Dark-matter halo overdensity is a real cosmological regression problem where only hand-designed approximations are available. [Decision] Convert a large halo catalog into a graph and train an L1-regularized GN to predict each halo overdensity from nearby halo masses, positions, and velocities.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "L1-regularized Graph Network for cosmology",
+        "version": ""
+      },
+      "parameters": {
+        "simulation": "zeroth open-source dark-matter N-body simulation at final time step",
+        "number_of_halos": "215854",
+        "node_features": "mass M_i, position r_i, velocity v_i",
+        "target": "smoothed overdensity delta_i = (rho_bar - <rho>)/<rho>",
+        "edge_rule": "connect halos within 50 distance units; 1 distance unit approximately 3 million light years",
+        "directional_edges": "30437218",
+        "average_neighbors_per_halo": "71",
+        "hidden_units": "500 after hyperparameter tuning",
+        "hidden_layers_per_node_and_message_function": "2",
+        "message_dimensions": "100",
+        "L1_regularization_scale": "1e-2"
+      },
+      "observation": "The trained cosmology GN learned an effectively one-dimensional message space: one message component had standard deviation about 1e-2, while the other 99 components had standard deviation below 1e-8.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] The cosmology GN compressed environmental information into one informative summed message component. [Gap] The learned GN predictor was still a neural black box and the desired result was an analytic relation useful for astrophysical interpretation. [Decision] Apply symbolic regression separately to the one informative edge message and the node function, analytically compose them, then refit constants directly on the original training data to remove accumulated approximation error.",
+      "action": "analysis",
+      "tool": {
+        "name": "Symbolic regression plus direct parameter refitting",
+        "version": ""
+      },
+      "parameters": {
+        "edge_symbolic_target": "one informative cosmology message component phi_1^e",
+        "node_symbolic_target": "phi^v mapping central halo properties and summed message to delta_i",
+        "baselines": "constant model; hand-designed simple formula using M_i and summed neighbor mass within 20 distance units",
+        "parameter_refit": "refit extracted formula constants directly to original training data"
+      },
+      "observation": "The discovered 'Best, with mass' analytic formula achieved loss 0.0882, improving on the hand-designed simple formula loss 0.121 and the constant baseline loss 0.421. The discovered 'Best, without mass' formula achieved loss 0.120, comparable to the hand-designed formula, using relative velocity information as a proxy for mass. Reported best-fit constants for 'Best, with mass' were C1=-0.156, C2=3.80, C3=0.0809, C4=0.438, C5=7.06, C6=15.5, C7=20.3.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] A central claim is that neural-network factorization makes symbolic regression feasible for high-dimensional systems. [Gap] It remained possible that off-the-shelf symbolic regression on raw N-body data might find the same equations without the GN. [Decision] Run eureqa directly on raw high-dimensional N-body simulation features without graph-network factorization.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "eureqa raw symbolic-regression baseline",
+        "version": ""
+      },
+      "parameters": {
+        "baseline_input": "features of every particle in a 6-body system",
+        "example_target": "x-direction acceleration of particle 2 under a 1/r^2 force law",
+        "factorization": "none"
+      },
+      "observation": "Even after convergence, raw eureqa produced poor, physically meaningless fits, for example an expression involving unrelated coordinates such as y4, x1, and x6 rather than the pairwise 1/r^2 structure. The authors used this as evidence that direct symbolic regression is intractable for the high-dimensional raw problem, while GN factorization makes the subproblems feasible.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Simple algebraic equations are expected to extrapolate better than ReLU neural networks when the symbolic form captures the underlying physical relation. [Gap] The cosmology formula needed to be tested beyond the distribution used to train the GN. [Decision] Mask 20% of halos with delta_i > 1 as out-of-distribution data, train the L1 GN on the remaining data, extract a symbolic expression from the trained GN, and compare errors.",
+      "action": "analysis",
+      "tool": {
+        "name": "Masked out-of-distribution cosmology evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "masked_fraction": "20%",
+        "mask_condition": "delta_i > 1",
+        "training_procedure": "same L1-regularized GN and symbolic extraction as full cosmology experiment"
+      },
+      "observation": "The symbolic extraction on the masked subset produced a functionally identical expression to the formula found on the full data. The GN achieved average absolute error |delta_i - delta_hat_i| = 0.0634 on its training set and 0.142 on the out-of-distribution masked data; the paper reports that the symbolic expression generalized better than the GN itself.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors validated the method by testing GNs on N-body simulations generated with different random seeds, measuring linear R^2 alignment between learned messages and true force components, applying symbolic regression to recover known force-law and Hamiltonian formulas, comparing discovered cosmology formulas against constant and hand-designed baselines by loss, and evaluating a masked high-overdensity cosmology split for out-of-distribution generalization.",
+    "metrics": {
+      "Spring_2D_L1_message_force_R2": {
+        "value": "1.000",
+        "unit": "dimensionless R^2",
+        "interpretation": "The L1-regularized GN messages were essentially an exact linear transformation of the true spring force components in the 2D spring simulation."
+      },
+      "r_minus_1_3D_L1_message_force_R2": {
+        "value": "1.000",
+        "unit": "dimensionless R^2",
+        "interpretation": "The L1-regularized messages aligned with true force components for the 3D 1/r orbital-force simulation."
+      },
+      "r_minus_2_3D_bottleneck_message_force_R2": {
+        "value": "0.994",
+        "unit": "dimensionless R^2",
+        "interpretation": "A bottleneck GN with message dimensionality matched to the 3D problem recovered force-like latent messages for the 1/r^2 simulation."
+      },
+      "dark_matter_best_with_mass_loss": {
+        "value": "0.0882",
+        "unit": "loss",
+        "interpretation": "The discovered analytic dark-matter overdensity formula with mass information fit the data substantially better than the hand-designed estimator."
+      },
+      "dark_matter_hand_designed_loss": {
+        "value": "0.121",
+        "unit": "loss",
+        "interpretation": "Baseline loss for the scientists' simple formula using halo mass and mass within a 20-distance-unit smoothing radius."
+      },
+      "dark_matter_constant_baseline_loss": {
+        "value": "0.421",
+        "unit": "loss",
+        "interpretation": "Baseline loss for predicting a constant overdensity."
+      },
+      "cosmology_informative_message_components": {
+        "value": "1",
+        "unit": "component",
+        "interpretation": "Only one of 100 message dimensions carried substantial variation in the L1-regularized cosmology GN."
+      },
+      "cosmology_informative_message_std": {
+        "value": "1e-2",
+        "unit": "standard deviation",
+        "interpretation": "The single informative cosmology message component had standard deviation of about 1e-2."
+      },
+      "cosmology_inactive_message_std_upper_bound": {
+        "value": "1e-8",
+        "unit": "standard deviation",
+        "interpretation": "The other 99 cosmology message components had standard deviation below this level, indicating an effectively one-dimensional learned interaction."
+      },
+      "masked_cosmology_GN_training_MAE": {
+        "value": "0.0634",
+        "unit": "mean absolute error",
+        "interpretation": "Average absolute error of the GN on the unmasked training portion when halos with delta_i > 1 were held out."
+      },
+      "masked_cosmology_GN_OOD_MAE": {
+        "value": "0.142",
+        "unit": "mean absolute error",
+        "interpretation": "Average absolute error of the GN on the masked out-of-distribution high-overdensity halos."
+      }
+    },
+    "final_verdict": "The original goal was met for several representative physical systems and partially met as a general-purpose discovery claim. With appropriate inductive biases, especially L1 sparsity or explicit bottlenecking, GN messages became force-like with R^2 values up to 1.000 and symbolic regression recovered known force-law forms and the Coulomb Hamiltonian form. On the real cosmology task, the extracted analytic formula achieved loss 0.0882, beating the hand-designed 0.121 baseline, and the extracted expression was reported to generalize out of distribution better than the GN. The paper also showed that success was not automatic: unconstrained message spaces and raw symbolic regression often failed, so the quantifiable goal was achieved specifically through the closed loop of GN inductive bias, sparsity, symbolic regression, and parameter refitting."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 2,
+      "what_failed": "The bottleneck GN, despite having the correct message dimensionality of 2 or 3, performed worse than the L1-regularized model under limited training time.",
+      "diagnosis": "The authors speculated that this may be related to the lottery ticket hypothesis: a larger sparse network may contain trainable subnetworks that are easier to find than a small fixed bottleneck network.",
+      "correction": "Use L1 regularization on 100-dimensional messages to encourage compact representations while retaining trainability."
+    },
+    {
+      "step_index_ref": 3,
+      "what_failed": "Standard 100-message-component GNs often did not produce message components linearly correlated with true forces.",
+      "diagnosis": "Without an explicit or implicit compactness constraint, force information can be distributed across high-dimensional latent features in a non-interpretable representation.",
+      "correction": "Constrain the effective message size using bottleneck, L1, or KL regularization; L1 was the most reliable in the reported experiments."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "Symbolic reconstruction of the true force law did not always succeed, especially for training strategies that failed to find compact representations of the right dimensionality.",
+      "diagnosis": "The symbolic regressor was fit to message components that were not clean scalar projections of the physical force, so it could select overly simple or wrong formulas. Reported failed examples included Spring 3D with KL yielding phi_1^e ≈ 0.57 Delta y + 0.32 Delta z instead of a spring term with (r-1), and 1/r 3D Standard yielding an IF expression divided by r rather than the expected component divided by r^2.",
+      "correction": "Use stronger inductive biases, particularly L1 sparsity or explicit bottlenecking, before symbolic regression; the authors did not claim a complete theory for when reconstruction succeeds."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Direct symbolic regression on the raw high-dimensional N-body dataset failed to find meaningful equations.",
+      "diagnosis": "The raw problem exposes symbolic regression to all particle features simultaneously, making the search space too large; eureqa converged to physically meaningless poor fits involving unrelated coordinates.",
+      "correction": "Factorize the problem with a graph neural network first, then apply symbolic regression to low-dimensional internal edge/node functions."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "The learned Hamiltonian pair term is not uniquely identifiable up to arbitrary functions of non-dynamical fixed parameters such as masses and charges.",
+      "diagnosis": "Hamiltonian dynamics depend on derivatives with respect to dynamical variables, so additive terms depending only on fixed parameters do not change the dynamics.",
+      "correction": "Judge success by whether symbolic regression recovers the correct dynamical functional dependence, such as q1 q2 / r for the charged-particle potential, while allowing extra fixed-parameter offset terms."
+    }
+  ]
+}

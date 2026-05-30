@@ -1,0 +1,349 @@
+{
+  "paper_id": "s2:442b8903a2e8808ec9956c0b17dc9d974d8156c4",
+  "title": "DexVLA: Vision-Language Model with Plug-In Diffusion Expert for General Robot Control",
+  "year": 2025,
+  "domain": "cs",
+  "venue": "arXiv.org",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/3896_442b8903a2e8808ec9956c0b17dc9d974d8156c4/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "DexVLA, a general robot-control vision-language-action model with a plug-in billion-parameter diffusion action expert for single-arm, bimanual, dexterous-hand, and mobile bimanual manipulation",
+    "input_data": "Qwen2-VL 2B as the VLM backbone; Scale Diffusion Policy / ScaleDP as the diffusion expert scaffold; approximately 100 hours of robot demonstrations spanning 91 tasks and four robot configurations; Stage 1 cross-embodiment data; Stage 2 embodiment-specific data; Stage 3 task-specific expert demonstrations with sub-step annotations; novel-embodiment tasks with 100 demonstrations each for drink pouring and packing; robot platforms including Franka with gripper, Franka with dexterous hand, bimanual UR5e, and bimanual AgileX; image inputs from up to three camera views at 320 x 240 resolution; language/sub-step annotations produced using Grounding-DINO, DINOv2, Google Gemini 2.0, and manual checking for Stage 3 data",
+    "user_intent": "Prior VLA systems were limited by data scarcity and architectural imbalance: OpenVLA and Octo depend on massive datasets such as Open-X Embodiment with about 4000 hours, pi_0 uses about 10000 hours, and existing systems often scale the VLM while leaving the action representation underpowered. Long-horizon dexterous manipulation also often requires an external high-level planner such as SayCan. The authors aimed to make VLA training more data-efficient, improve cross-embodiment action learning, and enable direct-prompted long-horizon robot control without an external high-level policy.",
+    "quantifiable_goal": "Use only about 100 hours of demonstration data, run inference at 60 Hz on a single Nvidia A6000 GPU, adapt to new embodiments with 100 demonstrations, outperform OpenVLA, Octo, Diffusion Policy, and pi_0 on averaged task scores over 10 real-world trials, and achieve nonzero performance on difficult long-horizon tasks such as laundry folding under direct prompting."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Existing VLA models such as OpenVLA, Octo, and pi_0 use large VLM backbones and very large robot datasets, but their action experts are relatively limited and often not designed for cross-embodiment dexterous manipulation. pi_0 can handle long-horizon tasks but uses an external high-level policy such as SayCan to decompose tasks. [Gap] The authors needed an action representation and training pipeline that could learn dexterous motor skills from much less data and work across different robot morphologies. [Decision] They framed DexVLA around a scaled diffusion-based action expert and an embodied curriculum rather than only scaling the VLM.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Comparative analysis of VLA baselines",
+        "version": ""
+      },
+      "parameters": {
+        "prior_models": "OpenVLA, Octo, pi_0, Diffusion Policy",
+        "prior_dataset_sizes": "Open-X Embodiment about 4000 hours; pi_0 / pi_0.5 about 10000 hours",
+        "identified_bottlenecks": "data scarcity; architectural imbalance; dependence on external high-level planners for long-horizon tasks"
+      },
+      "observation": "The authors identified two primary bottlenecks: costly large-scale data requirements and insufficiently powerful action representations. They also identified long-horizon planning through external modules as a limitation they wanted to internalize inside the VLA.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Diffusion Policy can model multimodal action distributions, and ScaleDP provides a transformer-based diffusion policy that can be scaled up to about 1B parameters. [Gap] Naive ScaleDP is not designed for cross-embodiment robot control, where action dimensions and robot configurations differ. [Decision] The authors designed a plug-in diffusion expert based on ScaleDP with a multi-head output structure, assigning each embodiment a unique output head.",
+      "action": "design",
+      "tool": {
+        "name": "Scale Diffusion Policy with multi-head embodiment outputs",
+        "version": ""
+      },
+      "parameters": {
+        "diffusion_expert_parameters": "1 billion",
+        "transformer_layers": "32",
+        "hidden_size": "1280",
+        "attention_heads": "16",
+        "output_structure": "one MLP head per embodiment",
+        "loss": "L = L_diff + alpha * L_ntp",
+        "alpha": "1"
+      },
+      "observation": "The designed action expert used a 1B-parameter diffusion transformer with separate embodiment heads, enabling cross-embodiment pretraining while preserving embodiment-specific action outputs.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] A VLM can process visual observations and language instructions, while the diffusion expert can generate actions. [Gap] The two modules operate in different representation spaces, and long-horizon tasks require reasoning tokens to influence action generation. [Decision] The authors integrated Qwen2-VL 2B with the diffusion expert using projected action tokens and FiLM-conditioned reasoning tokens.",
+      "action": "design",
+      "tool": {
+        "name": "Qwen2-VL-based DexVLA architecture",
+        "version": "Qwen2-VL 2B"
+      },
+      "parameters": {
+        "vlm_backbone": "Qwen2-VL 2B",
+        "visual_inputs": "multiple camera views concatenated as visual tokens",
+        "projection_module": "two linear layers with LayerNorm",
+        "reasoning_injection": "FiLM layers scale and shift projection layers in the policy",
+        "outputs": "reasoning tokens and action tokens"
+      },
+      "observation": "The resulting architecture allowed the VLM to generate both reasoning tokens and action tokens. Action tokens were projected into the diffusion expert input space, while reasoning tokens conditioned the policy through FiLM layers.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Long-horizon demonstrations can span more than 2 minutes, and a single instruction such as folding laundry is too coarse for diffusion-action learning. [Gap] The model needed structured supervision that maps sub-instructions to motor primitives without requiring an external high-level planner at inference. [Decision] The authors annotated demonstrations with sub-step reasoning, using automated tools for object-level and long-horizon segmentation and manually checking higher-quality Stage 3 data.",
+      "action": "analysis",
+      "tool": {
+        "name": "Grounding-DINO, DINOv2, and Google Gemini 2.0 annotation pipeline",
+        "version": "Gemini 2.0"
+      },
+      "parameters": {
+        "substep_frequency": "typically every 5 seconds",
+        "object_level_tools": "Grounding-DINO and DINOv2 for object bounding boxes and names",
+        "grasp_detection": "intersection over union between gripper and object bounding boxes",
+        "long_horizon_segmentation_tool": "Google Gemini 2.0 selects reasoning labels from a predefined sub-step list",
+        "manual_checking": "Stage 3 training data only"
+      },
+      "observation": "The pipeline produced sub-step language annotations such as breaking shirt folding into stages like smoothing wrinkles, aligning sleeves, and securing folds. These annotations were used as intermediate language outputs rather than direct instructional inputs.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] The VLM has internet-scale visual-language knowledge but lacks embodied motor skills, and training the full VLA from scratch is expensive and unstable. [Gap] The diffusion expert needed foundational visuomotor skills before being coupled to the VLM. [Decision] In Stage 1, the authors pretrained only the diffusion expert on cross-embodiment data using lightweight image and language encoders.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Stage 1 cross-embodiment diffusion-expert pretraining",
+        "version": ""
+      },
+      "parameters": {
+        "trained_components": "diffusion expert only",
+        "image_encoder": "randomly initialized ResNet-50",
+        "language_encoder": "DistilBERT",
+        "conditioning": "FiLM layers",
+        "data": "cross-embodiment demonstrations from about 100 hours and 91 tasks",
+        "learning_rate": "1e-4",
+        "lr_scheduler": "constant",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+        "weight_decay": "0.0",
+        "epochs": "5",
+        "image_resolution": "320 x 240",
+        "camera_views": "3"
+      },
+      "observation": "Stage 1 warmed up the 1B-parameter diffusion expert and trained generalizable motor skills while avoiding the cost of training the full VLA. The appendix reports that training only the diffusion expert achieved 0.89 epoch/hour versus 0.32 epoch/hour for training the entire VLA, a 2.78x speedup.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Cross-embodiment pretraining can teach basic motor behavior but may not align to the target robot's physical constraints, cameras, and action space. [Gap] The VLM representations and diffusion expert needed to be grounded in a specific embodiment for deployment. [Decision] In Stage 2, the authors filtered to embodiment-specific data and jointly trained the VLM, projection layer, and diffusion expert while freezing the VLM visual encoder.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Stage 2 embodiment-specific alignment",
+        "version": ""
+      },
+      "parameters": {
+        "trained_components": "VLM, projection layer, diffusion expert",
+        "frozen_components": "VLM visual encoder",
+        "data": "embodiment-specific data with one embodiment per sample",
+        "learning_rate": "2e-5",
+        "lr_scheduler": "constant",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+        "weight_decay": "0.0",
+        "epochs": "5",
+        "substep_reasoning": "used as intermediate language output"
+      },
+      "observation": "After Stage 2, the same parameter set could perform several tasks without task-specific adaptation. On shirt folding, DexVLA achieved an average score of 0.92, while Stage 1 alone and Stage 2 alone both scored 0.0 in the ablation.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Stage 2 performance was sufficient for some tasks such as flattened shirt folding, table bussing easy, and bin picking with trained objects. [Gap] Complex long-horizon and dexterity-demanding tasks still require fine-grained, context-dependent actions and fluent execution. [Decision] The authors applied Stage 3 task-specific adaptation using expert demonstrations with sub-step reasoning for difficult tasks and novel embodiments.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Stage 3 task-specific adaptation",
+        "version": ""
+      },
+      "parameters": {
+        "learning_rate": "2e-5",
+        "lr_scheduler": "cosine",
+        "optimizer": "AdamW(beta1=0.9,beta2=0.95)",
+        "weight_decay": "0.0",
+        "epochs": "5",
+        "new_embodiment_demonstrations": "100 demonstrations each for drink pouring and packing",
+        "sorting_demonstrations": "200 demonstrations",
+        "substep_reasoning": "used as intermediate language output"
+      },
+      "observation": "Stage 3 enabled adaptation to tasks and embodiments absent from Stage 1 and Stage 2, including Franka with dexterous hand for drink pouring and bimanual UR5e for packing. It also enabled nonzero long-horizon laundry folding performance, improving the laundry-folding score from 0.0 without Stage 3 to 0.4 with Stage 3.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] A central claim was that DexVLA could perform complex tasks without task-specific adaptation after Stage 2. [Gap] This needed to be tested against strong VLA and diffusion baselines under the same fine-tuning regime. [Decision] The authors evaluated DexVLA against OpenVLA, Octo, and Diffusion Policy on shirt folding, bin picking easy, and table bussing easy using averaged scores over 10 trials.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Real-world evaluation without task-specific adaptation",
+        "version": ""
+      },
+      "parameters": {
+        "tasks": "shirt folding, bin picking easy, table bussing easy",
+        "trials_per_task_method": "10",
+        "metric": "normalized averaged score",
+        "baselines": "OpenVLA, Octo, Diffusion Policy",
+        "baseline_training": "fine-tuned on the same dataset and for the same number of epochs as Stage 2"
+      },
+      "observation": "DexVLA significantly outperformed all baselines. On shirt folding, baseline methods struggled to complete any steps, while DexVLA achieved a 0.92 average score without task-specific adaptation.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] The authors claimed that the pretrained DexVLA model could rapidly acquire skills on embodiments not present in Stage 1 or Stage 2. [Gap] Cross-embodiment generalization needed to be tested on genuinely new robot systems with limited data. [Decision] They fine-tuned the Stage 2 model on two novel embodiments and compared it to OpenVLA, Octo, and Diffusion Policy.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Novel-embodiment fine-tuning evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "novel_embodiments": "Franka arm with dexterous hand; bimanual UR5e",
+        "tasks": "drink pouring; packing",
+        "demonstrations_per_task": "100",
+        "trials_per_task_method": "10",
+        "franka_dexterous_hand_action_dimension": "12 DoF",
+        "bimanual_ur5e_action_dimension": "14-dimensional configuration and action space",
+        "baselines": "Diffusion Policy, Octo, OpenVLA"
+      },
+      "observation": "DexVLA achieved an average score of 0.90 across the two novel-embodiment tasks and substantially outperformed Diffusion Policy, Octo, and OpenVLA. Visual generalization tests showed shirt folding scores of 0.78 on novel objects, 0.78 on novel scenes, and 0.56 on novel objects plus scenes; drink pouring scored 0.83, 0.67, and 0.67 under the same three settings.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] Long-horizon tasks such as laundry folding, dryer unloading, sorting, bin picking hard, and bussing table hard require multi-step reasoning, visual context understanding, and extended dexterous execution. [Gap] Prior systems often rely on external planners or fail under direct prompting. [Decision] The authors evaluated direct-prompted DexVLA against OpenVLA, Octo, and pi_0 on long-horizon real-world tasks.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Direct-prompted long-horizon real-world evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "tasks": "laundry folding, bussing table hard, dryer unloading, sorting, bin picking hard",
+        "trials_per_task_method": "10",
+        "comparison_models": "OpenVLA, Octo, pi_0 where available",
+        "prompting": "direct task instructions without external high-level policy",
+        "laundry_folding_duration": "more than 2 minutes per episode",
+        "sorting_objects": "5-8 randomly placed objects"
+      },
+      "observation": "DexVLA achieved 0.4 on laundry folding versus 0.2 for directly prompted pi_0. On table bussing hard, DexVLA surpassed pi_0 by 0.08 points. In appendix results against OpenVLA and Octo, DexVLA scored 0.8 on dryer unloading while both baselines scored 0, and on sorting and bin picking hard DexVLA achieved scores nearly 3 times higher than the baselines.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 11,
+      "thought": "[Background] The framework combined several proposed ingredients: three-stage training, a 1B diffusion expert, and sub-step reasoning. [Gap] The authors needed to determine which components were necessary and whether smaller action experts or direct prompting could suffice. [Decision] They ran ablations on stage combinations, diffusion-expert size, sub-step reasoning, and implicit reasoning versus SayCan.",
+      "action": "analysis",
+      "tool": {
+        "name": "Ablation studies",
+        "version": ""
+      },
+      "parameters": {
+        "stage_ablation_conditions": "Stage 1 only; Stage 2 only; Stage 1 + Stage 2; Stage 1 + Stage 2 + Stage 3",
+        "diffusion_expert_sizes": "UNet 93M; diffusion expert 410M; diffusion expert 1B",
+        "substep_ablation": "direct prompting in Stage 1 and/or Stage 2 versus sub-step reasoning",
+        "saycan_comparison_task": "bussing table hard"
+      },
+      "observation": "Stage 1 only scored 0.0 on shirt folding and 0.0 on laundry folding; Stage 2 only scored 0.0 and 0.0; Stage 1 + Stage 2 scored 0.92 on shirt folding but 0.0 on laundry folding; all three stages scored 0.92 and 0.4. Diffusion-expert size mattered: UNet 93M scored 0.17, 410M scored 0.63, and 1B scored 0.92 on shirt folding. Removing sub-step reasoning reduced shirt-folding score from 0.92 to 0.07 or 0.0 depending on the stage setup. Replacing implicit sub-step reasoning with SayCan scored 0.58 on bussing table hard versus 0.70 for DexVLA sub-step reasoning.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 12,
+      "thought": "[Background] Beyond real-world manipulation, the authors wanted to test whether the learned Stage 1 weights were useful on a standard simulation benchmark. [Gap] The paper needed evidence that DexVLA was not only tuned to its real-world task suite. [Decision] They evaluated DexVLA on LIBERO and compared it with DP, OpenVLA, To-FAST, and TT0.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "LIBERO benchmark evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "benchmark": "LIBERO",
+        "metrics": "success scores on Spatial, Object, Goal, and Average",
+        "baselines": "DP, OpenVLA, To-FAST, TT0",
+        "initialization": "DexVLA uses Stage 1 pretrained weights"
+      },
+      "observation": "DexVLA achieved 97.2 on Spatial, 99.1 on Object, 95.6 on Goal, and 97.3 average, outperforming DP average 79.7, OpenVLA 84.1, To-FAST 93.9, and TT0 97.1.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Real-world robot evaluations over 10 trials per task using normalized task-specific scores, ablation studies, visual generalization tests, zero-shot transfer tests, training-cost measurement, and LIBERO simulation benchmark evaluation.",
+    "metrics": {
+      "shirt_folding_without_task_specific_adaptation": {
+        "value": "0.92",
+        "unit": "average normalized score",
+        "interpretation": "DexVLA achieved near-full performance on flattened shirt folding after Stage 2 without Stage 3 task-specific adaptation, while baselines struggled to complete any steps."
+      },
+      "laundry_folding_direct_prompting": {
+        "value": "0.4",
+        "unit": "average normalized score",
+        "interpretation": "DexVLA achieved nonzero performance on a more-than-2-minute crumpled-laundry folding task using direct prompting, compared with 0.2 for directly prompted pi_0."
+      },
+      "new_embodiment_average_score": {
+        "value": "0.90",
+        "unit": "average normalized score",
+        "interpretation": "After fine-tuning with 100 demonstrations on each novel task, DexVLA adapted to new embodiments including a dexterous hand and bimanual UR5e."
+      },
+      "dryer_unloading_score": {
+        "value": "0.8",
+        "unit": "average normalized score",
+        "interpretation": "DexVLA handled an additional long-horizon task where Octo and OpenVLA scored 0."
+      },
+      "libero_average": {
+        "value": "97.3",
+        "unit": "benchmark score",
+        "interpretation": "DexVLA outperformed listed LIBERO baselines including DP, OpenVLA, To-FAST, and TT0."
+      },
+      "inference_rate": {
+        "value": "60",
+        "unit": "Hz",
+        "interpretation": "DexVLA runs at real-time control speed on a single Nvidia A6000 GPU."
+      },
+      "stage1_training_speed": {
+        "value": "0.89",
+        "unit": "epoch/hour",
+        "interpretation": "Training only the diffusion expert in Stage 1 was faster than training the entire VLA at 0.32 epoch/hour."
+      },
+      "training_speedup_stage1_vs_entire_vla": {
+        "value": "2.78",
+        "unit": "x",
+        "interpretation": "The diffusion-expert-only Stage 1 training strategy was 2.78 times faster than training the entire VLA with the same batch size."
+      },
+      "zero_shot_cross_embodiment_success_rate": {
+        "value": "60",
+        "unit": "%",
+        "interpretation": "A Stage 2 model trained on a Franka with Robotiq gripper achieved 60% success on 30 novel bin-picking objects after swapping to a dexterous hand constrained to one degree of freedom, compared with 67% using the original gripper."
+      }
+    },
+    "final_verdict": "The paper partially-to-strongly met its stated goals. DexVLA was trained from only about 100 hours of robot data, ran at 60 Hz on a single Nvidia A6000 GPU, adapted to new embodiments with 100 demonstrations, and outperformed OpenVLA, Octo, Diffusion Policy, and pi_0 on the reported real-world evaluations. It achieved strong Stage 2 performance on tasks such as shirt folding without task-specific adaptation and achieved nonzero direct-prompted long-horizon laundry folding performance. However, the most difficult long-horizon tasks were not solved completely, with laundry folding reaching 0.4 rather than near-perfect performance, so the result demonstrates substantial progress rather than complete mastery."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 6,
+      "what_failed": "Training only Stage 1 or only Stage 2 failed to produce successful folding behavior.",
+      "diagnosis": "Stage 1 alone learns cross-embodiment motor skills but is not aligned to a target embodiment and VLM, while Stage 2 alone lacks the pretrained warm-up needed for the large diffusion expert to learn meaningful actions. The authors hypothesize that the large number of diffusion-expert parameters makes optimization difficult without Stage 1 pretraining.",
+      "correction": "Use the full embodied curriculum: Stage 1 cross-embodiment diffusion-expert pretraining followed by Stage 2 embodiment-specific alignment."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "DexVLA without Stage 3 scored 0.0 on laundry folding despite achieving 0.92 on shirt folding after Stage 1 + Stage 2.",
+      "diagnosis": "Long-horizon, contact-rich tasks such as laundry folding require task-specific fine-grained and context-dependent behaviors that are not mastered by Stage 2 alignment alone.",
+      "correction": "Apply Stage 3 task-specific adaptation using high-quality expert demonstrations and sub-step reasoning annotations, which raised laundry folding to 0.4."
+    },
+    {
+      "step_index_ref": 11,
+      "what_failed": "Smaller action experts underperformed the 1B diffusion expert on shirt folding.",
+      "diagnosis": "The 93M UNet-based diffusion policy achieved only 0.17 and exhibited oscillatory robot movements; the authors hypothesize that fewer parameters cause interference between different actions in parameter space. The 410M diffusion expert improved to 0.63 but still trailed the 1B model's 0.92, indicating insufficient capacity for wide task variety.",
+      "correction": "Scale the diffusion expert to 1B parameters using a transformer architecture with multi-head embodiment outputs."
+    },
+    {
+      "step_index_ref": 11,
+      "what_failed": "Removing sub-step reasoning caused large performance drops or complete failure.",
+      "diagnosis": "Training with only direct prompting for long-horizon tasks leads to conflicts in the shared action parameter space and causes the model to skip critical steps. The paper reports shirt-folding scores dropping from 0.92 to 0.07 or 0.0 when sub-step reasoning was removed from Stage 1 and/or Stage 2.",
+      "correction": "Use sub-step reasoning annotations as intermediate language outputs so the model learns a more disentangled action space and maps sub-instructions to motor primitives."
+    },
+    {
+      "step_index_ref": 11,
+      "what_failed": "Replacing DexVLA's implicit sub-step reasoning with SayCan reduced performance on bussing table hard.",
+      "diagnosis": "SayCan updates instructions at a fixed frequency of every two seconds, which can introduce redundant or repeated states, whereas DexVLA's implicit sub-step reasoning adaptively segments the state space during long-horizon tasks.",
+      "correction": "Keep sub-step reasoning internal to DexVLA rather than relying on an external SayCan-style high-level planner."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Zero-shot cross-embodiment transfer from a gripper to a dexterous hand had lower performance than the original gripper.",
+      "diagnosis": "The dexterous hand differs visually from the gripper, the wrist camera mounting position shifts significantly, and the change in hand height alters the effective grasping height.",
+      "correction": "The authors constrained the dexterous hand to one degree of freedom for the test and presented the result as evidence of robustness; full dexterous cross-embodiment control remains future work."
+    }
+  ]
+}

@@ -1,0 +1,230 @@
+{
+  "paper_id": "paper:big_data_science_in_porous_materials_materials_genomics_and:2020",
+  "title": "Big-Data Science in Porous Materials: Materials Genomics and Machine Learning",
+  "year": 2020,
+  "domain": "chemistry",
+  "venue": "Chemical Reviews",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/14395_8bba999de25bfb288b3f7f88e1d907aab02638b6/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "A review and methodological roadmap for applying big-data science, materials genomics, and machine learning to porous materials, especially metal-organic frameworks",
+    "input_data": "Published literature on porous materials and machine learning; the known scale of the field including millions of possible MOFs from combinations of metal nodes and organic linkers, over 10,000 synthesized porous MOFs, about 80,000 synthesized non-porous MOFs, and over 100,000 predicted or hypothetical porous materials",
+    "user_intent": "Conventional brute-force synthesis and computational screening cannot process the rapidly growing number of real and hypothetical porous materials; the authors aimed to explain how machine learning can use these large datasets to discover correlations, accelerate screening, and guide porous-materials research",
+    "quantifiable_goal": "No experimental numeric performance target was stated; the measurable scope was to review machine-learning workflows for porous-material datasets at the scale of approximately 10^4 synthesized porous crystals and >10^5 predicted materials, and to cover applications including gas storage and separation, stability, electronic properties, molecular simulations, synthesis, and generative models"
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] MOFs, COFs, PPNs, zeolites, and related porous materials can be generated in very large numbers because metal nodes and organic linkers can be recombined. More than 10,000 porous MOFs and 80,000 non-porous MOFs had been synthesized, and over 100,000 predicted materials were available. [Gap] Only a tiny fraction of possible materials can be synthesized or screened by conventional brute-force methods. [Decision] Frame porous-material discovery as a big-data and materials-genomics problem requiring machine-learning methods.",
+      "action": "literature_check",
+      "tool": {
+        "name": "materials genomics literature survey",
+        "version": ""
+      },
+      "parameters": {
+        "material_classes": "MOFs, COFs, PPNs, zeolites, related porous materials",
+        "synthesized_porous_MOFs": ">10,000",
+        "synthesized_non_porous_MOFs": "80,000",
+        "predicted_materials": ">100,000"
+      },
+      "observation": "The authors identified a scale mismatch between the number of possible porous materials and the capacity of conventional synthesis or brute-force computational screening.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Machine learning terminology and workflow choices are often unfamiliar or inconsistently used in chemistry and materials-science communities. [Gap] Readers need a common vocabulary before specific porous-material applications can be evaluated. [Decision] Introduce the machine-learning landscape and define common technical terms such as training set, test set, validation set, feature, label, regression, classification, overfitting, regularization, bootstrapping, bias, and variance.",
+      "action": "design",
+      "tool": {
+        "name": "machine-learning workflow glossary",
+        "version": ""
+      },
+      "parameters": {
+        "review_section": "Section 2 and Table 1",
+        "term_categories": "data splits, model fitting, error types, regularization, regression, classification, uncertainty"
+      },
+      "observation": "The paper established a shared vocabulary for later discussion of porous-material machine-learning studies.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Porous-material datasets may be large in total but can still be biased, non-representative, imbalanced, or small for a particular property. Hypothetical databases can also differ from experimentally realized materials. [Gap] Training data selected without considering diversity, imbalance, or representativeness can lead to poor predictive performance and misleading conclusions. [Decision] Review data-selection strategies, including diverse set selection, active learning, methods for little-data regimes, and strategies for imbalanced data labels.",
+      "action": "analysis",
+      "tool": {
+        "name": "data-selection and sampling strategy review",
+        "version": ""
+      },
+      "parameters": {
+        "topics": "limitations of hypothetical databases; diverse set selection; active learning; little data; imbalanced labels",
+        "review_section": "Section 3"
+      },
+      "observation": "The authors identified data selection as a critical bottleneck and organized mitigation strategies for non-representative, small, and imbalanced porous-material datasets.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Machine-learning algorithms require numeric feature vectors, whereas porous materials are atomistic crystals with chemistry, topology, pore geometry, and local coordination environments. [Gap] Poor structural representations can prevent a model from learning physically meaningful structure-property relationships. [Decision] Review descriptor strategies for translating porous-material structures into machine-readable feature vectors, including local descriptors, global descriptors, feature engineering, feature selection, and data transformations.",
+      "action": "analysis",
+      "tool": {
+        "name": "porous-material descriptor review",
+        "version": ""
+      },
+      "parameters": {
+        "descriptor_scales": "local descriptors; global descriptors",
+        "feature_learning_topics": "feature engineering; feature selection; data transformations",
+        "review_section": "Section 4"
+      },
+      "observation": "The paper mapped the descriptor landscape for porous materials and emphasized that representation choice is central to model performance and interpretability.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Different machine-learning models have different assumptions and data requirements. Porous-material datasets can range from tall, unstructured datasets to limited, structured datasets. [Gap] There is no universal model class that is optimal for all porous-material prediction tasks. [Decision] Review model families and match them to data regimes, including neural networks, Bayesian learning, instance-based learning, and ensemble methods.",
+      "action": "analysis",
+      "tool": {
+        "name": "machine-learning algorithm comparison",
+        "version": ""
+      },
+      "parameters": {
+        "model_families": "neural networks; Bayesian learning; instance-based learning; ensemble methods",
+        "data_regimes": "lots of unstructured data; limited structured data",
+        "review_section": "Section 5"
+      },
+      "observation": "The authors presented algorithm choice as conditional on dataset size, structure, uncertainty needs, and the desired balance between accuracy and interpretability.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Machine-learning models can overfit, become sensitive to hyperparameters, or appear successful only because of flawed evaluation. [Gap] Without careful validation, reported porous-material models may not generalize to unseen materials or extrapolative chemical spaces. [Decision] Review hyperparameter tuning, regularization, holdout splits, cross-validation, bootstrapping, regression and classification metrics, extrapolation ability, applicability domain, uncertainty intervals, model comparison, ablation studies, and randomization tests.",
+      "action": "analysis",
+      "tool": {
+        "name": "model-validation and evaluation framework",
+        "version": ""
+      },
+      "parameters": {
+        "validation_methods": "holdout splits; cross-validation; bootstrap",
+        "diagnostic_methods": "applicability domain; uncertainty intervals; ablation studies; randomization tests",
+        "review_sections": "Sections 6 and 7"
+      },
+      "observation": "The review specified validation practices needed to distinguish meaningful learning from overfitting or artifacts in porous-material ML studies.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Even accurate black-box models may be scientifically unhelpful if their decisions cannot be interpreted. [Gap] In materials science, models can exploit indirect correlations or dataset artifacts, producing a 'Clever Hans' effect rather than causal insight. [Decision] Review approaches for interpretation, including explainable models, post-hoc techniques for black boxes, and audits of indirect influences.",
+      "action": "analysis",
+      "tool": {
+        "name": "model-interpretability review",
+        "version": ""
+      },
+      "parameters": {
+        "interpretability_topics": "explainable models; post-hoc techniques; auditing indirect influences",
+        "review_section": "Section 8"
+      },
+      "observation": "The authors highlighted interpretability and auditing as necessary to avoid spurious correlations and to extract scientific understanding from porous-material ML models.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Machine learning had already been applied to multiple porous-material problems, but the studies were distributed across subfields. [Gap] A consolidated assessment was needed to show where ML had been used and where opportunities remained. [Decision] Survey applications of supervised ML and related methods in gas storage and separation, process-engineering links, stability, reactivity and chemical properties, electronic properties, molecular simulations, synthesis, synthesizability, and generative models.",
+      "action": "literature_check",
+      "tool": {
+        "name": "porous-material machine-learning application survey",
+        "version": ""
+      },
+      "parameters": {
+        "application_areas": "gas storage and separation; stability; reactivity and chemical properties; electronic properties; molecular simulations; synthesis; synthesizability; generative models",
+        "review_section": "Section 9"
+      },
+      "observation": "The paper organized existing porous-material ML applications into major scientific tasks, showing that gas adsorption and separation were prominent while synthesis, stability, and generative design were emerging areas.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] As ML adoption grows, porous-material studies face workflow-management and reproducibility challenges. [Gap] Without automation, standardized reporting, and provenance tracking, results can be difficult to compare or reproduce. [Decision] Conclude with outlook topics including automated ML workflows, reproducibility, comparability and reporting standards, transfer learning, multifidelity optimization, multitask prediction, and future big-data science directions.",
+      "action": "reflection",
+      "tool": {
+        "name": "outlook and reproducibility analysis",
+        "version": ""
+      },
+      "parameters": {
+        "outlook_topics": "automated ML workflow; reproducibility; comparability; reporting standards; transfer learning; multifidelity optimization; multitask prediction",
+        "review_section": "Section 10"
+      },
+      "observation": "The authors proposed that future porous-material ML should emphasize automation, reproducibility, transfer across fidelities and datasets, and standardized reporting.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Because this is a review rather than a primary experimental or computational study, success was verified by the breadth and organization of the literature synthesis rather than by a new benchmark, assay, or synthesis. The paper structured the field from data selection and descriptors through algorithms, validation, interpretation, applications, and outlook.",
+    "metrics": {
+      "synthesized_porous_MOF_scale_reviewed": {
+        "value": ">10,000",
+        "unit": "materials",
+        "interpretation": "The review addressed ML methods relevant to the known scale of synthesized porous MOFs."
+      },
+      "synthesized_non_porous_MOF_scale_reviewed": {
+        "value": "80,000",
+        "unit": "materials",
+        "interpretation": "The review situated porous-material ML within the broader scale of synthesized MOF chemistry."
+      },
+      "predicted_material_scale_reviewed": {
+        "value": ">100,000",
+        "unit": "materials",
+        "interpretation": "The review targeted databases large enough to motivate big-data and ML approaches."
+      },
+      "major_application_areas_covered": {
+        "value": "8",
+        "unit": "areas",
+        "interpretation": "The application survey covered gas storage and separation, stability, reactivity and chemical properties, electronic properties, molecular simulations, synthesis, synthesizability, and generative models."
+      }
+    },
+    "final_verdict": "The review met its stated qualitative goal: it provided a structured overview of how big-data science and machine learning can be applied to porous materials at the scale of tens of thousands of synthesized structures and more than one hundred thousand predicted materials. It did not claim to discover a new material or validate a new predictive model; instead, it synthesized methods, applications, evaluation practices, interpretability concerns, and future directions for the field."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Hypothetical databases may be non-representative of experimentally realizable porous materials.",
+      "diagnosis": "Generated structures can sample regions of chemical or structural space that differ from synthesized materials, so models trained on them may not generalize to experimental materials.",
+      "correction": "The authors reviewed data-selection strategies, diverse sampling, active learning, and careful treatment of dataset limitations."
+    },
+    {
+      "step_index_ref": 3,
+      "what_failed": "Small, imbalanced, or biased datasets can degrade predictive performance.",
+      "diagnosis": "Some porous-material properties have few labels, and class or property distributions may be skewed, causing models to learn majority trends or sampling artifacts.",
+      "correction": "The review emphasized strategies for little-data regimes, imbalanced labels, and representative sampling."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Machine-learning models can overfit and report inflated performance.",
+      "diagnosis": "A large gap between training and test error indicates that a model has memorized training data rather than learned generalizable structure-property relationships.",
+      "correction": "The authors highlighted regularization, hyperparameter tuning, holdout splits, cross-validation, bootstrapping, and appropriate regression or classification metrics."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Models may fail when extrapolating outside their training domain.",
+      "diagnosis": "Porous-material design often asks models to predict new chemistries or structures that are far from the training distribution.",
+      "correction": "The review discussed estimating extrapolation ability, defining applicability domains, and reporting confidence or prediction intervals."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Black-box models may learn spurious indirect correlations, the 'Clever Hans' problem.",
+      "diagnosis": "A model can appear accurate while relying on dataset artifacts or proxy variables rather than physically meaningful features.",
+      "correction": "The authors recommended explainable models, post-hoc interpretation methods, and model audits to identify indirect influences."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Machine-learning studies in porous materials can be difficult to reproduce or compare.",
+      "diagnosis": "Differences in datasets, preprocessing, splits, metrics, hyperparameters, and reporting practices can obscure whether one model is genuinely better than another.",
+      "correction": "The review called for reproducible workflows, comparability and reporting standards, provenance tracking, and automation of the ML workflow."
+    }
+  ]
+}

@@ -1,0 +1,272 @@
+{
+  "paper_id": "paper:temporal_convolutional_neural_network_for_the_classification:2018",
+  "title": "Temporal Convolutional Neural Network for the Classification of Satellite Image Time Series",
+  "year": 2018,
+  "domain": "earth_science",
+  "venue": "Remote Sensing",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/14943_27a7170bf265352c1e9992eea641200bba58ce36/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "A Temporal Convolutional Neural Network classifier for land-cover classification from high-resolution Satellite Image Time Series",
+    "input_data": "46 Formosat-2 optical images acquired in 2006 over a 24 km × 24 km area near Toulouse, France, at 8 m spatial resolution; 3 spectral bands used per image: near-infrared 760–900 nm, red 630–690 nm, and green 520–600 nm; 1,033,409 labeled pixels from 1,419 polygons across 13 land-cover classes; reference labels from 2006 farmer declarations, ground campaigns, and a semi-automatic reference map for urban areas; 60% polygon-level training and 40% polygon-level testing repeated over 5 random splits.",
+    "user_intent": "Traditional SITS classifiers such as Random Forests and SVMs treat the image sequence as an unordered feature stack and therefore do not explicitly exploit temporal relationships, while RNNs exploit sequence structure but can be harder and slower to train for whole-series land-cover labels. The authors wanted to test whether temporal convolutions provide a better deep-learning approach for SITS classification and to derive practical architecture guidelines.",
+    "quantifiable_goal": "Evaluate TempCNNs quantitatively by Overall Accuracy averaged over 5 polygon-level train/test folds and qualitatively by visual map inspection; determine whether TempCNNs outperform RF and RNN state-of-the-art baselines, with the paper reporting a final improvement of about 1–3 percentage points in Overall Accuracy."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Accurate land-cover maps are needed for climate, environmental monitoring, disaster prevention, and policy, and new high-resolution SITS provide temporal, spectral, and spatial detail. [Gap] Standard classifiers used for SITS, especially RF and SVM, do not explicitly use the temporal order of acquisitions. [Decision] Frame the study as an experimental evaluation of 1D temporal CNNs, where convolutions are applied along the time dimension, against RF and RNN baselines.",
+      "action": "literature_check",
+      "tool": {
+        "name": "State-of-the-art review of RF/SVM, RNN, CNN, and TempCNN methods for SITS classification",
+        "version": ""
+      },
+      "parameters": {
+        "task": "supervised pixel-level land-cover classification from satellite image time series",
+        "comparison_targets": "Random Forests and bidirectional GRU-based Recurrent Neural Networks",
+        "model_family_under_study": "Temporal Convolutional Neural Networks with 1D convolutions over time"
+      },
+      "observation": "The review identified RF/SVM as traditional dominant approaches, RNNs as the leading deep-learning approach for SITS, and TempCNNs as promising but not yet extensively studied for multispectral SITS with a broad 13-class nomenclature.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] The raw optical SITS contains clouds, saturated pixels, irregular acquisition dates, and multiple possible spectral representations. [Gap] The classifiers compared in the study require valid values and, for most models, regular temporal sampling. [Decision] Prepare the Formosat-2 time series by masking invalid pixels, temporally interpolating values, creating both original and 2-day regular temporal samplings, and computing optional spectral indices.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Temporal linear interpolation and spectral-index extraction",
+        "version": ""
+      },
+      "parameters": {
+        "images": "46 Formosat-2 acquisitions",
+        "spatial_resolution": "8 m",
+        "bands_used": "NIR, red, green",
+        "discarded_band": "blue, because it is sensitive to atmospheric artifacts",
+        "regular_temporal_grid": "2 days",
+        "original_time_series_length": "46 timestamps",
+        "interpolated_time_series_length": "149 timestamps",
+        "spectral_indices": "NDVI, NDWI, brilliance index",
+        "feature_sets": "NDVI only; spectral bands only; spectral bands + NDVI + NDWI + brilliance index",
+        "normalization": "per-feature-type min-max normalization using 2nd and 98th percentiles instead of minimum and maximum"
+      },
+      "observation": "The prepared datasets had 46, 138, or 276 features under original sampling for NDVI, spectral bands, or spectral bands plus indices, respectively, and 149, 447, or 894 features under 2-day sampling. Invalid cloudy and saturated pixels were gap-filled by temporal linear interpolation.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] The study needed statistically meaningful estimates while avoiding leakage from spatially contiguous pixels in the same polygon. [Gap] Random pixel-level splitting would let pixels from the same polygon appear in both train and test sets. [Decision] Split the reference data at polygon level into training, validation, and testing subsets and repeat the train/test split five times.",
+      "action": "design",
+      "tool": {
+        "name": "Polygon-level repeated train/test splitting",
+        "version": ""
+      },
+      "parameters": {
+        "classes": "13",
+        "pixels": "1,033,409",
+        "polygons": "1,419",
+        "train_fraction": "60%",
+        "test_fraction": "40%",
+        "repetitions": "5 folds",
+        "validation_set": "5% of the training set",
+        "validation_constraint": "validation instances cannot come from the same polygons as the remaining training instances"
+      },
+      "observation": "The evaluation protocol produced five independent polygon-level train/test folds, and all reported Overall Accuracy values were averaged over these five folds with one-standard-deviation intervals when displayed.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] CNNs can reduce parameters through shared convolutional filters and can learn repeated temporal patterns in the SITS. [Gap] A concrete TempCNN architecture and training recipe were needed before comparing with baselines and exploring hyperparameters. [Decision] Define a baseline TempCNN composed of three temporal convolutional layers followed by a dense layer and Softmax output, with regularization mechanisms to limit overfitting.",
+      "action": "design",
+      "tool": {
+        "name": "Keras TempCNN with TensorFlow backend",
+        "version": ""
+      },
+      "parameters": {
+        "convolutional_layers": "3",
+        "convolution_units_per_layer": "64",
+        "convolution_filter_size": "5",
+        "dense_layer_units": "256",
+        "output_layer": "Softmax over 13 classes",
+        "activation": "ReLU",
+        "batch_normalization": "used",
+        "dropout_rate": "0.5",
+        "L2_weight_decay": "1e-6",
+        "optimizer": "Adam",
+        "Adam_beta1": "0.9",
+        "Adam_beta2": "0.999",
+        "Adam_epsilon": "1e-8",
+        "batch_size": "32",
+        "epochs": "20",
+        "early_stopping_patience": "0"
+      },
+      "observation": "A reproducible baseline TempCNN was implemented in Keras with TensorFlow backend, and the authors released code at https://github.com/charlotte-pel/temporalCNN.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] RF is a strong traditional SITS classifier, while RNNs with GRU or LSTM units are the most studied deep-learning architecture for SITS. [Gap] TempCNN performance had to be evaluated against both categories under the same data splits and evaluation metric. [Decision] Train RF and bidirectional GRU-based RNN baselines and compare their Overall Accuracy with the TempCNN.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Scikit-Learn Random Forest and Keras bidirectional GRU RNN",
+        "version": ""
+      },
+      "parameters": {
+        "RF_trees": "500",
+        "RF_features_per_split": "square root of the total number of features",
+        "RNN_structure": "stack of 3 bidirectional GRU layers, one 256-neuron dense layer, and Softmax layer",
+        "RNN_GRU_widths_tested": "16, 32, 64, 128, 256 neurons",
+        "best_reported_RNN_width": "128 neurons",
+        "RNN_training": "batch size 32, Adam optimizer, validation-loss early stopping",
+        "evaluation_metric": "Overall Accuracy"
+      },
+      "observation": "The paper reports that TempCNNs were more accurate than RF and RNN baselines, outperforming them by about 1–3 percentage points in Overall Accuracy over the five folds.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] The proposed TempCNN should exploit both the temporal order of observations and the multispectral structure at each time step. [Gap] It was unclear whether temporal guidance alone, spectral guidance alone, or their combination was responsible for performance. [Decision] Compare four convolutional configurations: no guidance, only temporal guidance, only spectral guidance, and both temporal and spectral guidance.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "TempCNN guidance ablation",
+        "version": ""
+      },
+      "parameters": {
+        "guidance_configurations": "no guidance; only temporal guidance; only spectral guidance; both temporal and spectral guidance",
+        "input_features": "Formosat-2 SITS feature sets derived from spectral bands and optional indices",
+        "metric": "Overall Accuracy averaged over 5 folds"
+      },
+      "observation": "The experiments demonstrated the importance of using both temporal and spectral dimensions when computing the convolutions; this was one of the main conclusions of the study.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Remote-sensing practitioners often add hand-crafted spectral indices such as NDVI, NDWI, and brilliance index to spectral bands. [Gap] It was unknown whether TempCNNs still benefit from these manually engineered features or can learn useful spectral-temporal representations directly from bands. [Decision] Evaluate TempCNNs with three input feature sets: NDVI alone, spectral bands alone, and spectral bands plus NDVI, NDWI, and brilliance index.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Spectral-feature ablation for TempCNN",
+        "version": ""
+      },
+      "parameters": {
+        "feature_set_1": "NDVI only",
+        "feature_set_2": "spectral bands only: NIR, red, green",
+        "feature_set_3": "spectral bands + NDVI + NDWI + brilliance index",
+        "original_sampling_feature_counts": "46, 138, 276",
+        "two_day_sampling_feature_counts": "149, 447, 894"
+      },
+      "observation": "Adding manually calculated spectral features such as NDVI did not improve TempCNN models; the authors recommended not computing and using these extra indices for TempCNNs in this setting.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] CNN performance depends heavily on architectural choices such as convolution filter size, pooling, network width, depth, regularization, and batch size. [Gap] There were no established TempCNN architecture guidelines for SITS classification. [Decision] Run a broad experimental study varying these architectural and optimization choices, totaling more than 2,000 deep-learning models.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "TempCNN architecture and hyperparameter sweep on NVIDIA Tesla V100 GPUs",
+        "version": ""
+      },
+      "parameters": {
+        "models_trained": "more than 2,000 deep-learning models",
+        "training_time": "more than 2,000 hours",
+        "main_GPU": "NVIDIA Tesla V100",
+        "studied_factors": "temporal convolution filter size, pooling layers, network width, network depth, regularization mechanisms, batch size",
+        "baseline_regularization": "batch normalization, dropout 0.5, L2 weight decay 1e-6, validation-based early stopping"
+      },
+      "observation": "The experiments supported general recommendations: global pooling layers drastically reduced trainable parameters but were harmful for SITS classification; pooling should be studied carefully and local average pooling should be favored; regularization and batch-size choices were analyzed as part of the TempCNN design guidance.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Quantitative Overall Accuracy does not fully reveal map artifacts such as boundary errors, majority-class spread, or salt-and-pepper noise. [Gap] The final land-cover maps needed visual assessment in addition to numerical accuracy. [Decision] Compare RF and TempCNN land-cover maps visually on two selected areas and inspect their disagreement maps.",
+      "action": "analysis",
+      "tool": {
+        "name": "Visual inspection of RF and TempCNN land-cover maps with disagreement maps",
+        "version": ""
+      },
+      "parameters": {
+        "visual_areas": "two areas marked in the Formosat-2 false-color image",
+        "comparison": "RF map versus TempCNN map",
+        "disagreement_display": "pixels where RF and TempCNN disagree shown in red",
+        "reference_image_date": "14 July 2006"
+      },
+      "observation": "The visual results looked broadly similar, but disagreement maps showed strong differences at class boundaries and object level. RF spread the majority urban class and over-detected urban areas, including confusion of an area referenced as sunflower. Both classifiers showed salt-and-pepper noise.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Quantitative validation used confusion matrices and Overall Accuracy on 40% polygon-level test data, averaged over five random train/test splits. Qualitative validation used visual inspection of RF and TempCNN land-cover maps and disagreement maps on two areas.",
+    "metrics": {
+      "test_pixels": {
+        "value": "1,033,409 total labeled pixels before splitting",
+        "unit": "pixels",
+        "interpretation": "The full labeled dataset used to create polygon-level training and testing folds."
+      },
+      "land_cover_classes": {
+        "value": "13",
+        "unit": "classes",
+        "interpretation": "The classification task covered winter crops, summer crops, natural classes, water, and urban surfaces."
+      },
+      "evaluation_folds": {
+        "value": "5",
+        "unit": "folds",
+        "interpretation": "Overall Accuracy values were averaged over five independent polygon-level splits."
+      },
+      "reported_TempCNN_accuracy_gain": {
+        "value": "1-3",
+        "unit": "percentage points Overall Accuracy",
+        "interpretation": "The paper reports that tested TempCNN architectures outperformed RF and RNN baselines by approximately 1 to 3 percentage points."
+      },
+      "deep_learning_models_trained": {
+        "value": "more than 2,000",
+        "unit": "models",
+        "interpretation": "Scale of the architecture and hyperparameter evaluation supporting the TempCNN design conclusions."
+      },
+      "training_compute_time": {
+        "value": "more than 2,000",
+        "unit": "GPU-hours or training hours",
+        "interpretation": "Approximate total training effort, mainly on NVIDIA Tesla V100 GPUs."
+      }
+    },
+    "final_verdict": "The original goal was met: the authors demonstrated that TempCNNs are a strong learner for SITS land-cover classification, outperforming RF and RNN baselines by about 1–3 percentage points in Overall Accuracy and producing visually good land-cover maps. The study also met its guideline-oriented aim by identifying useful design choices, including the need to exploit both temporal and spectral dimensions, the lack of benefit from hand-crafted spectral indices, and the risk of harmful pooling choices."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 2,
+      "what_failed": "The optical SITS contained invalid pixel values caused by clouds, shadows, and saturated pixels.",
+      "diagnosis": "Optical satellite acquisitions are affected by atmospheric and acquisition artifacts; classification algorithms need complete valid time series.",
+      "correction": "The authors used cloud, shadow, and saturation masks produced during atmospheric correction and filled invalid values using temporal linear interpolation."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Adding hand-crafted spectral indices such as NDVI, NDWI, and brilliance index did not improve TempCNN performance.",
+      "diagnosis": "The TempCNN could already learn useful nonlinear spectral-temporal representations from the available spectral bands, making manually calculated indices unnecessary in this experiment.",
+      "correction": "The authors recommended not computing and using these additional spectral features for TempCNN models in this setting."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Global pooling layers were harmful for SITS classification despite strongly reducing the number of trainable parameters.",
+      "diagnosis": "Global pooling discarded temporal information that remained important for discriminating land-cover classes in SITS.",
+      "correction": "The authors recommended careful study before integrating pooling layers into TempCNNs and favored local average pooling rather than global pooling."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "RF over-detected the majority urban class in visual map inspection and spread urban labels, especially around mixed or boundary pixels.",
+      "diagnosis": "The RF map showed majority-class spreading and object-level disagreements, including an area referenced as sunflower that RF classified as urban.",
+      "correction": "TempCNN reduced this majority-class over-representation in the reported visual comparison; disagreement maps were used to expose the issue."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Both RF and TempCNN maps contained salt-and-pepper noise.",
+      "diagnosis": "The study focused on pixel-level temporal and spectral classification and did not incorporate spatial context into the classification framework.",
+      "correction": "The authors suggested post-processing or future frameworks that include the spatial dimension of SITS in addition to temporal and spectral dimensions."
+    }
+  ]
+}

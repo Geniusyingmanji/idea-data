@@ -1,0 +1,156 @@
+{
+  "01_initial_request": {
+    "target_name": "Artificial luciferases (de novo luciferases)",
+    "input_data": "4,000 native small-molecule-binding proteins (for initial docking), 85 experimental structures of NTF2-like proteins (for extracting residue-residue distance and orientation distributions), and synthetic luciferin substrates (diphenylterazine/DTZ and 2-deoxycoelenterazine).",
+    "user_intent": "To overcome the limitations of native luciferases (such as misfolding, low substrate specificity, and cofactor requirements) by designing de novo luciferases from scratch that are small, highly stable, well-expressed in cells, and highly specific to synthetic luciferins for use as molecular probes in bioassays and multiplexed imaging.",
+    "quantifiable_goal": "A small molecular weight (~13.9 kDa), high thermostability (melting temperature > 95 °C), and a high catalytic efficiency (kcat/Km = 10^6 M^-1 s^-1) on diphenylterazine, comparable to native luciferases but with much higher substrate specificity."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Known / completed: Native NTF2 structures have a range of pocket sizes and shapes but contain non-ideal features like long loops that compromise stability. [Gap] Missing / unresolved: Large numbers of ideal NTF2-like structures with suitable pockets for DTZ binding. [Decision] To create large numbers of ideal NTF2-like structures, chose trRosetta to run Monte Carlo searches in sequence space and structure prediction on 2,000 naturally occurring NTF2s, expecting an essentially unlimited number of hallucinated NTF2 scaffolds with shape-complementary binding pockets.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "trRosetta",
+        "version": ""
+      },
+      "parameters": {
+        "starting_sequences": "2,000 naturally occurring NTF2s",
+        "search_method": "Monte Carlo searches in sequence space",
+        "loss_function": "confidence of the neural network in the predicted structure supplemented with a topology-specific loss function over core residue pair geometries",
+        "loop_regions": "allowed the number of residues to vary",
+        "structural_specificity": "incorporated buried, long-range hydrogen-bonding networks"
+      },
+      "observation": "Generated 1,615 family-wide hallucinated NTF2 scaffolds that provided more shape-complementary binding pockets for DTZ than native small-molecule-binding proteins.",
+      "valid": true
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Known / completed: 1,615 family-wide hallucinated NTF2 scaffolds have been generated. [Gap] Missing / unresolved: Placement of catalytic residues to stabilize the anionic state of DTZ and lower the single-electron transfer (SET) energy barrier. [Decision] To design a shape-complementary catalytic site, chose RifGen and RifDock to enumerate rotamer interaction fields (RIFs) and dock anionic DTZ conformers against hallucinated NTF2 scaffolds, expecting scaffolds with optimized side chain–DTZ interactions including a key arginine residue.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "RifGen and RifDock",
+        "version": ""
+      },
+      "parameters": {
+        "substrate_conformers": "ensemble of anionic DTZ conformers",
+        "RIFs_grid": "three-dimensional grids consisting of millions of placements of amino acid side chains making hydrogen-bonding and nonpolar interactions",
+        "key_catalytic_residue": "arginine guanidinium group placed adjacent to the N1 atom of the imidazopyrazinone group",
+        "selection_cutoff": "top 50,000 docks with the most favourable side chain-DTZ interactions"
+      },
+      "observation": "An average of eight side-chain rotamers, including an arginine residue to stabilize the anionic imidazopyrazinone core, were positioned in each pocket. The top 50,000 docks were selected for sequence optimization.",
+      "valid": true
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Known / completed: Top 50,000 docks with favorable side chain-DTZ interactions are identified. [Gap] Missing / unresolved: The remainder of the sequence needs optimization for high-affinity binding and foldability while maintaining the catalytic geometry and structural specificity. [Decision] To optimize the sequence for high-affinity binding to DTZ, chose RosettaDesign to run two-step sequence optimization and filtering on the top 50,000 docks, expecting a set of highly stable and specific designs ready for experimental screening.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "RosettaDesign",
+        "version": ""
+      },
+      "parameters": {
+        "step_1_constraints": "identities of all RIF and HBNet residues kept fixed, surrounding residues optimized",
+        "step_2_constraints": "RIF residue identities (except arginine) allowed to vary",
+        "relaxation": "scaffold backbone, side chains and DTZ substrate allowed to relax in Cartesian space",
+        "filtering_criteria": "ligand-binding energy, protein-ligand hydrogen bonds, shape complementarity and contact molecular surface"
+      },
+      "observation": "7,648 designs were selected and ordered as pooled oligos for experimental screening.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Known / completed: 7,648 computational designs for DTZ luciferases have been generated as pooled oligos. [Gap] Missing / unresolved: Experimental validation to identify which computational designs actually possess luciferase activity in vitro and in vivo. [Decision] To identify active luciferases, chose E. coli expression and colony-based screening to perform in vivo expression and luminescence imaging on the 7,648 designs, expecting clones with confirmed luciferase activity.",
+      "action": "wet_experiment",
+      "tool": {
+        "name": "E. coli expression and colony-based screening",
+        "version": ""
+      },
+      "parameters": {
+        "expression_host": "Escherichia coli",
+        "screening_method": "colony-based screening and 96-well plate expression confirmation"
+      },
+      "observation": "Three active designs were identified. The most active, LuxSit, is 117 residues (13.9 kDa), highly expressed, soluble, monomeric, and not fully unfolded at 95 °C, with an emission peak around 480 nm.",
+      "valid": true
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Known / completed: LuxSit was successfully designed for DTZ, establishing a working pipeline for de novo luciferases. [Gap] Missing / unresolved: Luciferases specific to another substrate, h-CTZ, which has a different molecular shape from DTZ. [Decision] To create h-CTZ-specific luciferases, chose AlphaFold2 and ProteinMPNN to perform pocket matching, catalytic site installation, and sequence design on additional NTF2 superfamily scaffolds, expecting active luciferases specific for the h-CTZ substrate.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "AlphaFold2 and ProteinMPNN",
+        "version": ""
+      },
+      "parameters": {
+        "scaffolds": "additional set of NTF2 superfamily scaffolds with matching pocket shapes",
+        "confidence_threshold": "AlphaFold2-predicted pLDDT > 92",
+        "catalytic_geometry": "histidine and arginine substrate interaction geometries successful in the first round",
+        "filtering_criteria": "AlphaFold2-predicted pLDDT, Cα RMSD, contact molecular surface and Rosetta-computed binding energies",
+        "experimental_selection": "46 designs"
+      },
+      "observation": "Identified 2 designs (HTZ3-D2 and HTZ3-G4) out of 46 that had luciferase activity with h-CTZ. Both were highly soluble, monodisperse, and monomeric.",
+      "valid": true
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Known / completed: LuxSit has confirmed activity but its catalytic efficiency could potentially be improved. [Gap] Missing / unresolved: Understanding of the specific contributions of active-site residues to catalysis and further optimization of the enzyme's turnover rate. [Decision] To optimize luciferase activity and understand catalysis, chose site-saturation mutagenesis (SSM) to systematically mutate and screen substrate-binding pocket residues in LuxSit, expecting variants with higher photon flux and catalytic efficiency.",
+      "action": "wet_experiment",
+      "tool": {
+        "name": "Site-saturation mutagenesis (SSM)",
+        "version": ""
+      },
+      "parameters": {
+        "target_residues": "each residue in the substrate-binding pocket",
+        "mutation_strategy": "mutated to every other amino acid one at a time"
+      },
+      "observation": "Identified A96M and M110V mutants which increased activity by 16-fold and 19-fold. Guided by this, LuxSit-i (R60S/A96L/M110V) was created, achieving a >100-fold higher photon flux and a catalytic efficiency (kcat/Km) of 10^6 M^-1 s^-1.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Known / completed: LuxSit-i is a highly efficient and specific de novo luciferase in vitro. [Gap] Missing / unresolved: Validation of its utility as a genetic tag and reporter in live mammalian cells, and demonstration of its multiplexing capability due to high substrate specificity. [Decision] To evaluate expression, function, and multiplexing capability, chose mammalian cell culture and luminescence imaging to perform transient expression and substrate/spectral-resolved assays in HEK293T cells expressing LuxSit-i and RLuc, expecting proof of high specificity and simultaneous pathway monitoring in live cells.",
+      "action": "wet_experiment",
+      "tool": {
+        "name": "Mammalian cell culture and luminescence imaging",
+        "version": ""
+      },
+      "parameters": {
+        "cell_line": "HEK293T cells",
+        "constructs": "LuxSit-i-mTagBFP2, NF-κB-LuxSit-i, CRE-RLuc",
+        "substrates": "DTZ (25 μM) and PP-CTZ",
+        "activators": "human tumour necrosis factor (TNF) and forskolin (FSK)",
+        "filters": "528/20 nm and 390/35 nm"
+      },
+      "observation": "LuxSit-i showed exquisite specificity (50-fold selectivity for DTZ over bis-CTZ, >100-fold over other luciferins). Successfully demonstrated simultaneous multiplexed reporting of NF-κB and cAMP-PKA signaling pathways in the same sample.",
+      "valid": true
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "In vitro biochemical characterization (SDS-PAGE, SEC, CD spectroscopy, luminescence kinetics) and in vivo mammalian cell assays (HEK293T live-cell imaging, multiplexed signaling pathway reporting).",
+    "metrics": {
+      "Molecular Weight": {
+        "value": "13.9",
+        "unit": "kDa",
+        "interpretation": "LuxSit is 117 residues, smaller than any previously described luciferase, meeting the goal of a small molecular weight."
+      },
+      "Thermostability": {
+        "value": "> 95",
+        "unit": "°C",
+        "interpretation": "CD melting experiments showed the protein is not fully unfolded at 95 °C and regains full structure upon cooling, meeting the high thermostability goal."
+      },
+      "Catalytic Efficiency (kcat/Km)": {
+        "value": "10^6",
+        "unit": "M^-1 s^-1",
+        "interpretation": "LuxSit-i achieved a catalytic efficiency of 10^6 M^-1 s^-1 on DTZ, comparable to native luciferases, meeting the quantifiable goal."
+      },
+      "Substrate Specificity": {
+        "value": "> 100",
+        "unit": "fold selectivity",
+        "interpretation": "LuxSit-i exhibited 50-fold selectivity for DTZ over bis-CTZ and >100-fold over other luciferin substrates, far exceeding the specificity of native luciferases."
+      }
+    },
+    "final_verdict": "The study successfully achieved the de novo design of artificial luciferases (LuxSit and its optimized variant LuxSit-i) from scratch. The designed enzymes perfectly met all quantifiable goals: they are extremely small (~13.9 kDa), highly thermostable (Tm > 95 °C), possess high catalytic efficiency (10^6 M^-1 s^-1) on the synthetic substrate DTZ, and exhibit exquisite substrate specificity that enables multiplexed bioassays in mammalian cells."
+  }
+}

@@ -1,0 +1,340 @@
+{
+  "paper_id": "paper:mapping_still_matters_coarse_graining_with_machine_learning:2025",
+  "title": "Mapping Still Matters: Coarse-Graining with Machine Learning Potentials",
+  "year": 2025,
+  "domain": "biology",
+  "venue": "Journal of Chemical Information and Modeling",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/16435_6ea7e4b672262559d8287e1b257a2837b090156d/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "A systematic benchmark of how coarse-grained mapping choices affect prior-free E(3)-equivariant machine-learning coarse-grained potentials, primarily MACE, for liquid hexane, capped amino acids, and capped 15-mer polyalanine",
+    "input_data": "Atomistic reference simulations generated with GROMACS in the NVT ensemble at 300 K. Liquid hexane used OPLS-AA with 100 molecules and a 100 ns production run. Peptide systems used AMBER ff99SB-ILDN with TIP3P water, ACE/NME caps, and 500 ns production runs. Configurations were uniformly sampled to produce 500,000 training frames. Coarse-grained positions and forces were obtained by center-of-mass mapping and force summation.",
+    "user_intent": "The authors wanted to determine whether equivariant MLPs can replace hand-crafted classical coarse-grained priors while still preserving topology, stereochemistry, and structural distributions. Prior CG-MLPs often still rely on classical bonded terms, and the effect of nontrivial CG mapping choices on learned equivariant representations was unclear.",
+    "quantifiable_goal": "Train force-matched CG potentials and test whether simulations at 300 K reproduce reference bonded distributions, RDFs, Ramachandran/free-energy surfaces, and helix handedness while remaining stable under defined criteria: for liquid hexane, exclude frames once thermal energy exceeds kBT < 5 kJ/mol; for amino acids and polyalanine, require bonded distances to remain within 0.05 nm of the reference equilibrium bond length. CG simulations used 2 fs timesteps, except the implicit-solvent capped amino-acid baseline used 0.5 fs."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Classical coarse-grained models depend strongly on mapping and fixed bonded/nonbonded functional forms, while equivariant MLPs such as MACE can in principle learn many-body potentials of mean force directly from force-matching data. [Gap] It was unknown how mapping resolution, species encoding, stereochemistry, and overlapping bonded/nonbonded length scales affect prior-free CG-MLPs. [Decision] The authors designed a benchmark spanning liquid hexane, capped amino acids, and capped 15-mer polyalanine, comparing MACE CG potentials against classical VOTCA CG potentials and selected NequIP checks.",
+      "action": "design",
+      "tool": {
+        "name": "Benchmark design with COM coarse-graining and force matching",
+        "version": ""
+      },
+      "parameters": {
+        "systems": "liquid hexane; capped amino acids; capped 15-mer polyalanine",
+        "mapping_rule": "center-of-mass mapping; each atom contributes to at most one CG bead",
+        "training_objective": "least-squares force residual between mapped atomistic forces and predicted CG forces",
+        "main_MLP_architecture": "MACE",
+        "classical_baseline": "VOTCA spline-based bonded and nonbonded CG potential",
+        "validation_architecture": "NequIP for selected key findings"
+      },
+      "observation": "The workflow defined a controlled comparison of mapping choices, model expressivity, species assignment, and topology preservation across increasingly complex molecular systems.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Bottom-up force matching requires atomistic trajectories with positions and forces that can be mapped to CG beads. [Gap] The benchmark needed consistent reference data for both bulk liquid and peptide systems. [Decision] The authors generated atomistic NVT simulations at 300 K and uniformly sampled large training sets for force matching.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "GROMACS",
+        "version": ""
+      },
+      "parameters": {
+        "ensemble": "NVT",
+        "temperature": "300 K",
+        "hexane_force_field": "OPLS-AA",
+        "hexane_system_size": "100 molecules",
+        "hexane_production_time": "100 ns",
+        "peptide_force_field": "AMBER ff99SB-ILDN",
+        "water_model": "TIP3P",
+        "peptide_caps": "ACE and NME",
+        "peptide_production_time": "500 ns",
+        "training_frames": "500,000 uniformly sampled frames"
+      },
+      "observation": "Reference atomistic trajectories were produced for liquid hexane and peptide systems and mapped to CG positions and forces for model training.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Classical force-matched CG potentials use predefined bonded and nonbonded terms, whereas MACE learns many-body interactions through equivariant message passing. [Gap] The authors needed to determine whether learned many-body CG potentials outperform fixed functional forms without explicit priors. [Decision] They trained classical VOTCA potentials and MACE potentials by force matching for each mapping.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "VOTCA and chemtrain MACE",
+        "version": ""
+      },
+      "parameters": {
+        "classical_potential_terms": "bonds, angles, dihedrals, and nonbonded interactions parameterized as splines",
+        "MLP_training_framework": "chemtrain",
+        "MLP_architecture": "MACE",
+        "MLP_training_loss": "force matching via backpropagation",
+        "CG_simulation_engine_for_MLP": "JAX-MD within chemtrain",
+        "CG_simulation_timestep": "2 fs",
+        "implicit_solvent_baseline_timestep": "0.5 fs"
+      },
+      "observation": "A matched set of classical and MACE CG models was obtained for the tested mappings, enabling direct comparison of structural accuracy, stability, and learned artifacts.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Liquid hexane is a standard CG test case with known two-site, three-site, and four-site mappings. [Gap] It was unclear whether MACE could learn the bonded and nonbonded structure without explicit topology across mappings with different interaction length scales. [Decision] The authors simulated three hexane mappings and compared bonded distributions and RDFs against the atomistic reference and classical CG models.",
+      "action": "analysis",
+      "tool": {
+        "name": "RDF and bonded-distribution analysis",
+        "version": ""
+      },
+      "parameters": {
+        "hexane_mappings": "four-site A-B-B-A; three-site A-B-A; two-site A-A n-propyl-end mapping",
+        "analysis_trajectories": "10 × 1000 ps simulations",
+        "temperature": "300 K",
+        "reported_uncertainty": "mean ± 3 standard deviations",
+        "four_site_bonded_metric": "dihedral angle phi_A-B-B-A",
+        "three_site_bonded_metric": "angle theta_A-B-A",
+        "two_site_bonded_metric": "bond distance b_A-A or nearest-neighbor distance for MLP"
+      },
+      "observation": "For four-site hexane, both classical and MACE models reproduced the dihedral shape, but the classical model overestimated gauche conformations near ±70 degrees and had larger RDF error. For three-site hexane, the classical potential failed to sample the A-B-A angle correctly because its bonded/nonbonded functional form cannot represent out-of-plane forces from atomistic dihedral reorientation, while MACE closely matched both RDF and angular distribution. For two-site hexane, the classical model reproduced bonded and nonbonded interactions, but the MACE simulation showed unphysical bond-partner switching: initial-bond-list distances broadened, nearest-neighbor distances matched the reference, and the RDF showed artificial peaks at 0.35 and 0.4 nm.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] MACE expressivity is controlled by message-passing depth, correlation order, and cutoff radius. [Gap] The authors needed to distinguish failures caused by insufficient model expressivity from failures caused by mapping-induced ambiguity. [Decision] They swept MACE correlation order, number of message-passing layers, and average neighbor count/cutoff for hexane, then checked the two-site bond-switching artifact with NequIP.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "MACE hyperparameter sweep and NequIP validation",
+        "version": ""
+      },
+      "parameters": {
+        "MACE_layers_tested": "L varied; simplest reported case L = 1",
+        "MACE_correlation_orders_tested": "nu = 1, 2, 3",
+        "average_neighbors_tested": "N_avg = 10 and 20, proportional to cutoff radius",
+        "parameter_sweep_trajectories": "50 × 1000 ps simulations",
+        "stability_metric_hexane": "thermal energy threshold kBT < 5 kJ/mol",
+        "speed_unit": "ns/day"
+      },
+      "observation": "For three-site hexane, the simplest MACE model with L = 1 and nu = 1 had total body order 2 and could not capture the angular distribution; increasing layers or correlation order recovered the interaction. Increasing correlation order or cutoff reduced RDF and force errors, and larger cutoff substantially improved stability at higher computational cost. Classical models remained over an order of magnitude faster, with about 1600, 2130, and 3470 ns/day for four-, three-, and two-site hexane. For two-site hexane, bond switching did not depend on nu or L and was also observed with NequIP, indicating a mapping-induced ambiguity rather than a MACE-specific defect.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Alanine dipeptide is a common test system for CG force fields and MLPs, and its backbone dynamics can be evaluated by Ramachandran free-energy surfaces. [Gap] The authors needed to know which amino-acid mappings preserve stereochemistry and molecular direction when trained only on L-amino-acid data. [Decision] They trained MACE models for nine capped L-alanine mappings, from atomistic implicit-solvent to five-bead low-resolution mappings, and analyzed phi/psi FES and NVE stability.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "MACE capped alanine simulations with Ramachandran FES analysis",
+        "version": ""
+      },
+      "parameters": {
+        "number_of_alanine_mappings": "9",
+        "production_sampling": "100 × 5 ns simulations for Ramachandran plots",
+        "NVE_stability_tests": "100 × 100 ps simulations with different timesteps",
+        "backbone_dihedrals": "phi C_ACE-N-C_alpha-C and psi N-C_alpha-C-N_NME",
+        "FES_relation": "F(phi, psi) = -kBT ln P(phi, psi)"
+      },
+      "observation": "High-resolution mappings that removed solvent and/or hydrogens accurately modeled backbone dihedrals. In NVE tests, the implicit-solvent model was stable up to 0.5 fs, while United Atom and Heavy Atom models were safe up to 3 fs. Low-resolution Core mappings that omitted C_beta showed point symmetry in the Ramachandran surface because the model could freely switch between L- and D-enantiomers after removal of both C_alpha hydrogen and the side chain. Adding C_beta resolved the formal chirality issue. A single-species assignment for all beads produced a subtler unphysical symmetry because the model could not capture molecular direction from indistinguishable local environments.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Removing atoms around a stereocenter may lower or remove the physical barrier that prevents enantiomerization. [Gap] The Ramachandran symmetries showed that chirality could be compromised, but the free-energy barrier for chiral inversion needed direct measurement. [Decision] The authors used well-tempered metadynamics to bias the improper C_alpha dihedral and quantify enantiomerization barriers in atomistic and CG alanine MLPs trained only on L-alanine.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Well-tempered metadynamics",
+        "version": ""
+      },
+      "parameters": {
+        "collective_variable": "improper C_alpha dihedral",
+        "training_data_chirality": "only L-alanine",
+        "temperature": "300 K",
+        "barrier_scaling": "bias factor gamma = T*/T",
+        "thermal_energy_reference": "approximately 0.6 kcal/mol at 300 K"
+      },
+      "observation": "The atomistic implicit-solvent MLP did not show enantiomerization up to 18 kcal/mol; further increasing the bias factor made the simulation unstable before a transition occurred. Removing one atom around the chiral center made enantiomerization accessible: Heavy Atom and Core Beta mappings had barriers of approximately 13 kcal/mol, while the United Atom mapping had a higher barrier of approximately 16 kcal/mol because merging heavy atoms with hydrogens shifted bead centers of mass away from the stereocenter and stabilized the initial configuration.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Single-residue stereochemical artifacts can propagate into peptide-scale secondary structure, and L-alanine peptides should preferentially form right-handed alpha helices. [Gap] It was unknown whether low-resolution CG-MLPs would preserve helix handedness and topology in a longer peptide. [Decision] The authors extended the low-resolution alanine mappings to capped 15-mer polyalanine and evaluated helicity and handedness order parameters.",
+      "action": "analysis",
+      "tool": {
+        "name": "Polyalanine helicity and handedness analysis",
+        "version": ""
+      },
+      "parameters": {
+        "peptide": "capped 15-mer L-alanine",
+        "mappings_tested": "Core, Core Beta, and C_alpha",
+        "additional_C_alpha_species_tests": "single species, alternating species, symmetric species arrangement, and unique species",
+        "reference_simulation_time": "500 ns",
+        "CG_starting_frames": "100 reference frames with lowest |chi_hel · Q_hel|",
+        "CG_trajectory_length": "100 × 5 ns",
+        "optimal_alpha_helix_C_alpha_distance": "d0 = 0.5 nm",
+        "helicity_width": "sigma^2 = 0.02 nm^2"
+      },
+      "observation": "The atomistic reference showed a clear population of partially folded right-handed alpha helices with chi_hel > 0 and Q_hel > 0. The C_alpha mapping was symmetric about chi_hel = 0 and showed no preference for helix handedness. Unique or alternating C_alpha species caused unphysical bond switches and instabilities. The Core mapping sampled incorrect left-handed helices more often, although it retained some preference for right-handed helices, likely influenced by starting from L-polyalanine reference frames. The Core Beta mapping captured correct helix formation.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] The benchmark produced both successful reproductions of reference structure and mapping-specific artifacts. [Gap] The authors needed to synthesize which problems are architectural and which are caused by coarse-graining choices. [Decision] They interpreted the failures in terms of topology-free geometric neighborhoods, lost stereochemical information, and ambiguous species encodings.",
+      "action": "reflection",
+      "tool": {
+        "name": "Cross-system interpretation",
+        "version": ""
+      },
+      "parameters": {
+        "architectures_considered": "MACE, NequIP, and likely invariant graph neural networks using distances/angles such as SchNet and DimeNet",
+        "artifact_classes": "bond permutations; enantiomerization; spurious species/direction symmetries; incorrect helix handedness"
+      },
+      "observation": "The authors concluded that equivariant MLPs can accurately model several CG mappings, especially three- and four-site hexane and high-resolution amino-acid mappings, but mapping still constrains physical validity. When bonded and nonbonded length scales overlap, topology-free MLPs cannot distinguish bonded from nonbonded neighbors, causing bond permutations. When chirality-defining atoms or species distinctions are removed, scalar-energy equivariant MLPs introduce unphysical symmetries that can propagate to peptide secondary structure.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The final claims were validated by force-matched CG molecular dynamics and structural analysis: RDFs for liquid hexane nonbonded structure; bonded dihedral/angle/bond distributions for hexane; MACE hyperparameter sweeps over correlation order, message-passing depth, and cutoff; NequIP replication of the two-site hexane bond-switching artifact; Ramachandran phi/psi free-energy surfaces for capped amino acids; NVE stability tests; well-tempered metadynamics of the improper C_alpha dihedral; and polyalanine helicity Q_hel and handedness chi_hel free-energy analysis.",
+    "metrics": {
+      "training_frames": {
+        "value": "500000",
+        "unit": "frames",
+        "interpretation": "Uniformly sampled atomistic configurations used to train force-matched CG potentials."
+      },
+      "hexane_temperature": {
+        "value": "300",
+        "unit": "K",
+        "interpretation": "Reference and CG simulations were compared under the same canonical temperature."
+      },
+      "hexane_stability_threshold": {
+        "value": "5",
+        "unit": "kJ/mol",
+        "interpretation": "For bulk hexane, frames were considered unstable once thermal energy exceeded this kBT threshold."
+      },
+      "peptide_bond_stability_threshold": {
+        "value": "0.05",
+        "unit": "nm",
+        "interpretation": "For capped amino acids and polyalanine, simulations were flagged when bonded distances deviated by more than this amount from the reference equilibrium bond length."
+      },
+      "hexane_analysis_replicates": {
+        "value": "10 × 1000",
+        "unit": "ps",
+        "interpretation": "Replicate CG simulations used for the main hexane bonded and RDF comparisons."
+      },
+      "hexane_parameter_sweep_replicates": {
+        "value": "50 × 1000",
+        "unit": "ps",
+        "interpretation": "Replicate simulations used to compare MACE correlation order, cutoff/neighbor count, stability, force error, speed, and RDF error."
+      },
+      "simplest_MACE_body_order_failure": {
+        "value": "L = 1, nu = 1",
+        "unit": "model setting",
+        "interpretation": "This total body-order-2 MACE model could not reproduce the three-site hexane angular distribution, whereas increasing layers or correlation order corrected the distribution."
+      },
+      "two_site_hexane_artifact_peaks": {
+        "value": "0.35 and 0.4",
+        "unit": "nm",
+        "interpretation": "RDF peaks observed for two-site MLP hexane due to newly bonded partners after unphysical bond switching."
+      },
+      "implicit_solvent_NVE_stable_timestep": {
+        "value": "0.5",
+        "unit": "fs",
+        "interpretation": "The capped alanine implicit-solvent model remained stable up to this timestep in NVE stability tests."
+      },
+      "united_and_heavy_atom_NVE_stable_timestep": {
+        "value": "3",
+        "unit": "fs",
+        "interpretation": "United Atom and Heavy Atom capped alanine models were reported safe up to this timestep."
+      },
+      "atomistic_enantiomerization_barrier_lower_bound": {
+        "value": "18",
+        "unit": "kcal/mol",
+        "interpretation": "No enantiomerization was observed for the atomistic implicit-solvent MLP up to this biasing barrier; higher bias destabilized the simulation before transition."
+      },
+      "heavy_atom_and_core_beta_enantiomerization_barrier": {
+        "value": "approximately 13",
+        "unit": "kcal/mol",
+        "interpretation": "Removing the C_alpha hydrogen made chiral inversion accessible in these CG mappings."
+      },
+      "united_atom_enantiomerization_barrier": {
+        "value": "approximately 16",
+        "unit": "kcal/mol",
+        "interpretation": "United Atom mapping had a higher inversion barrier because merged bead centers of mass were shifted away from the stereocenter."
+      },
+      "thermal_energy_at_300K": {
+        "value": "approximately 0.6",
+        "unit": "kcal/mol",
+        "interpretation": "The enantiomerization barriers remained high relative to thermal energy, implying rare transitions at 300 K but possible state-point dependence."
+      },
+      "polyalanine_reference_time": {
+        "value": "500",
+        "unit": "ns",
+        "interpretation": "Atomistic reference simulation used to establish right-handed alpha-helix populations for capped 15-mer L-alanine."
+      },
+      "polyalanine_CG_validation_runs": {
+        "value": "100 × 5",
+        "unit": "ns",
+        "interpretation": "CG trajectories used to compare C_alpha, Core, and Core Beta mapping effects on helicity and handedness."
+      },
+      "ideal_alpha_helix_Calpha_distance": {
+        "value": "0.5",
+        "unit": "nm",
+        "interpretation": "Target C_alpha-pair distance used in the Q_hel helicity metric."
+      }
+    },
+    "final_verdict": "The original goal was met as a systematic mapping benchmark rather than as a single universal model-construction success. MACE successfully reproduced important structural distributions for several mappings, especially three- and four-site hexane and high-resolution amino-acid mappings, and it overcame classical functional-form limitations in the three-site hexane angle. However, the study also demonstrated that not every CG mapping is compatible with prior-free topology-free MLPs: two-site hexane and C_alpha polyalanine suffer from bond permutations when bonded and nonbonded length scales overlap, Core alanine loses chirality when side-chain information is removed, and poor species encoding introduces additional unphysical symmetries. The authors therefore concluded that mapping still critically determines whether CG-MLPs are physically reliable."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 4,
+      "what_failed": "The classical force-matched three-site hexane potential failed to reproduce the A-B-A angular distribution.",
+      "diagnosis": "The fixed sum of angle, bond, and nonbonded terms cannot represent out-of-plane forces caused by atomistic dihedral reorientation; it only captures forces in the plane where the angle is defined.",
+      "correction": "Using the MACE many-body equivariant MLP recovered the RDF and angular distribution; increasing MACE expressivity further improved angular modeling when the simplest model was insufficient."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "The simplest MACE model with L = 1 and nu = 1 failed to capture the three-site hexane angular distribution.",
+      "diagnosis": "This setting gives total body order 2, which is too low to represent the required angular/many-body interaction.",
+      "correction": "The authors increased the number of message-passing layers or the correlation order, which allowed MACE to capture the angular distribution correctly."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "The two-site hexane MLP showed unphysical bond-partner switching during simulation.",
+      "diagnosis": "Bonded and nonbonded length scales overlap in the two-site mapping, and the MLP lacks explicit topological information, so it cannot distinguish original bonded partners from nearby nonbonded beads.",
+      "correction": "The authors analyzed nearest-neighbor distances to diagnose the artifact and tested different nu and L values plus NequIP; the artifact persisted, indicating that such mappings require topology information, regularization, or prior terms rather than only geometric neighborhoods."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Low-resolution Core alanine mappings without C_beta produced a point-symmetric Ramachandran free-energy surface and free switching between L- and D-enantiomeric configurations.",
+      "diagnosis": "Removing both the C_alpha hydrogen and the side chain eliminates the formal definition of chirality, making enantiomerization an unhindered rotation in the CG representation.",
+      "correction": "Adding the C_beta bead restored chirality and kept the CG molecule in the original L-enantiomer."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "A single species assignment for all alanine CG beads introduced a subtle unphysical symmetry.",
+      "diagnosis": "Indistinguishable local environments prevented the model from capturing the direction of the molecule.",
+      "correction": "The authors emphasized careful bead species assignment; more detailed species encoding avoids this directionality ambiguity."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Further biasing the atomistic implicit-solvent alanine MLP beyond 18 kcal/mol in metadynamics made the simulation unstable before enantiomerization occurred.",
+      "diagnosis": "The physically high planar transition barrier for direct enantiomerization remained inaccessible; excessive bias destabilized the simulation rather than producing a transition.",
+      "correction": "The authors treated 18 kcal/mol as a lower bound/no-transition observation for the atomistic model and compared it with CG mappings where removing atoms around the stereocenter made inversion accessible."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "The C_alpha polyalanine mapping did not preserve helix handedness and some C_alpha species choices caused bond switches and instabilities.",
+      "diagnosis": "The C_alpha-only representation is symmetric with respect to chi_hel = 0 and lacks sufficient stereochemical/topological information; unique or alternating species did not solve topology ambiguity and led to unphysical bond permutations.",
+      "correction": "The Core Beta mapping, which retains side-chain chirality information, captured correct helix formation; the authors concluded that very coarse C_alpha protein mappings are unsuitable for current topology-free MLPs without topology information or prior regularization."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "The Core polyalanine mapping sampled incorrect left-handed helices more than the reference.",
+      "diagnosis": "Stereochemical information was insufficient compared with Core Beta, so single-residue chirality artifacts propagated to secondary-structure handedness.",
+      "correction": "Including C_beta in the Core Beta mapping corrected helix handedness and produced the best low-resolution polyalanine behavior."
+    }
+  ]
+}

@@ -1,0 +1,327 @@
+{
+  "paper_id": "paper:driveadapter_breaking_the_coupling_barrier_of_perception_and:2023",
+  "title": "DriveAdapter: Breaking the Coupling Barrier of Perception and Planning in End-to-End Autonomous Driving",
+  "year": 2023,
+  "domain": "cs",
+  "venue": "IEEE International Conference on Computer Vision",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/3468_d9fc4a4179ba964a6c5f69e7be7deffc14a434e4/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "DriveAdapter, an end-to-end autonomous driving system that uses raw camera and LiDAR inputs for perception while directly reusing a frozen Roach reinforcement-learning teacher model for planning through learnable adapter modules",
+    "input_data": "CARLA simulator version 0.9.10.1; Roach reinforcement-learning teacher with hand-crafted safety rules; training data collected at 2 Hz on Town01, Town03, Town04, and Town06 totaling 189K frames, plus an extra-data setting with 2M frames on 8 towns. Each frame includes raw sensor data from 4 cameras and 1 LiDAR, depth, semantic segmentation, control signals, ground-truth Roach feature maps, ego-vehicle states, final action, and whether rules overrode the teacher. Cameras output 900x1600 RGB images with 150 degree FOV; LiDAR has 64 channels, upper FOV 10 degrees, lower FOV -20 degrees, frequency 10 Hz. The perception target is Roach-style BEV privileged input with 24 types including road, route, lane, vehicle, pedestrian, and traffic-light masks over history timesteps.",
+    "user_intent": "Prior teacher-student autonomous-driving methods train a student planning head by behavior cloning, which can suffer from causal confusion such as inertia at intersections. Direct raw-sensor reinforcement learning is inefficient, requiring about 20 million steps or around 20 days. The authors wanted to decouple perception and planning more completely by preserving the RL teacher's driving knowledge while making the student focus on perception, but had to overcome the distribution gap between predicted BEV segmentation and privileged ground-truth BEV inputs.",
+    "quantifiable_goal": "Improve closed-loop CARLA Driving Score using only raw sensor inputs at evaluation, especially over the direct Student Model + Frozen Roach baseline on Town05 Long with DS 8.9, and achieve state-of-the-art or competitive results against prior methods such as TCP with DS 57.2 and ThinkTwice with DS 65.0 on Town05 Long; report Driving Score, Route Completion, and Infraction Score on Town05 Long and Longest6."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Raw-sensor RL agents such as MaRLn can learn causal driving behavior but require about 20 million steps, around 20 days, because simulator rendering of raw sensors is expensive. Teacher-student methods such as Roach improve RL efficiency by training a teacher on privileged BEV information and then behavior-cloning a raw-sensor student. [Gap] The student still learns a planning head from scratch by behavior cloning, which can create causal confusion and inertia. [Decision] Reframe the system so the frozen RL teacher performs planning directly, while the student learns only the perception interface required by the teacher.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Teacher-student paradigm review: MaRLn, Roach, LBC, PlanT, TCP, MILE",
+        "version": ""
+      },
+      "parameters": {
+        "raw_sensor_RL_reference_cost": "20 million steps, around 20 days",
+        "teacher_training_input": "privileged BEV tensors containing ground-truth surrounding agents, lanes, and traffic signs",
+        "evaluation_input_constraint": "raw sensor data only"
+      },
+      "observation": "The authors identified behavior cloning causal confusion as the main coupling barrier and proposed to reuse the teacher policy instead of training a new student planning head.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] A frozen teacher can only be used at test time if raw sensor data can be converted into the teacher's expected privileged input or internal feature distribution. [Gap] Training and supervision data are needed not only for BEV segmentation but also for feature alignment and action guidance. [Decision] Collect CARLA data using Roach plus rules and store raw sensors, BEV/perception labels, teacher features, final actions, and rule-override indicators.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "CARLA simulator",
+        "version": "0.9.10.1"
+      },
+      "parameters": {
+        "training_towns_limited": "Town01, Town03, Town04, Town06",
+        "limited_dataset_size": "189K frames",
+        "collection_frequency": "2 Hz",
+        "extra_dataset_size": "2M frames",
+        "extra_dataset_towns": "8 towns",
+        "expert": "Roach + collision-detector / hand-crafted rules",
+        "sensors": "4 cameras + 1 LiDAR + IMU + GPS + speedometer",
+        "camera_resolution": "900x1600 RGB",
+        "camera_FOV": "150 degrees",
+        "lidar_channels": "64",
+        "lidar_frequency": "10 Hz"
+      },
+      "observation": "The dataset contained raw camera and LiDAR inputs, depth and semantic labels, control signals, ego states, target points, high-level commands, Roach feature maps at different layers, final actions, and rule-override flags needed for masked feature alignment and action guidance.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] A straightforward way to use a frozen Roach teacher is to train a strong perception model to output the BEV segmentation input expected by Roach. BEVFusion and Mask2Former are state-of-the-art perception components. [Gap] It was unknown whether high-quality predicted BEV segmentation would be close enough to privileged ground truth for the teacher policy. [Decision] Build a BEVFusion + Mask2Former student that predicts Roach-style BEV segmentation from 4 cameras and 1 LiDAR, then directly feed the prediction to frozen Roach.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "BEVFusion + Mask2Former + frozen Roach",
+        "version": ""
+      },
+      "parameters": {
+        "image_lifting": "Lift-Splat-Shoot with depth module",
+        "lidar_backbone": "SECOND",
+        "segmentation_head": "Mask2Former",
+        "input_modalities": "4 cameras and 1 LiDAR",
+        "BEV_grid": "256x256 for both modalities, center 192x192 used for BEV segmentation",
+        "history_frames": "2 frames: [-1, 0]",
+        "BEV_segmentation_classes": "object type by timestep, derived from Roach 24-type privileged input; route mask drawn rather than predicted"
+      },
+      "observation": "The predicted BEV segmentation had test unseen-scene mIoU 0.35. Directly feeding it to frozen Roach gave poor Town05 Long driving performance, DS 8.9, far below Transfuser DS 31.0 and LAV DS 46.5. Visualizations showed incomplete and blurry lanes/agents and sometimes wrong traffic-light states, indicating a large distribution gap from ground-truth BEV.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] The failed direct BEV-to-Roach baseline showed that the teacher is sensitive to the domain shift between predicted and ground-truth BEV inputs. Adapters have been used in NLP and vision to transfer frozen models to new downstream domains. [Gap] The frozen Roach teacher needs a way to transform imperfect student features into the feature distribution it expects without destroying learned RL driving knowledge. [Decision] Add learnable adapter modules after teacher layers and supervise them with layer-by-layer feature alignment to ground-truth teacher features.",
+      "action": "design",
+      "tool": {
+        "name": "DriveAdapter adapter modules with feature alignment",
+        "version": ""
+      },
+      "parameters": {
+        "teacher_policy": "Roach, frozen",
+        "adapter_location": "after each Roach network layer except the measurement encoder and output linear action layer",
+        "adapter_input": "concatenation of previous teacher feature H_i and downsampled raw BEV feature F_i",
+        "2D_adapter": "one ResNet bottleneck with squeeze-and-excitation",
+        "1D_adapter": "two-layer MLP",
+        "feature_alignment_loss": "Smooth L1 regression between adapted feature and ground-truth Roach feature from ground-truth BEV segmentation"
+      },
+      "observation": "The design created an end-to-end differentiable bridge from raw sensor perception to frozen teacher planning, allowing the adapter to reduce the distribution gap gradually across teacher layers while preserving the teacher policy.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Roach itself is imperfect; adding hand-crafted rules substantially improves the privileged-information teacher, with Roach + Rule reaching DS 87.0 versus Roach DS 74.2 on Town05 Long. [Gap] Purely aligning to teacher features would force the student-adapter system to mimic teacher states that can produce unsafe decisions later overridden by rules. [Decision] Mask feature-alignment losses when rules override the teacher and add an action loss so the adapters learn features that lead the frozen teacher head toward the rule-corrected action.",
+      "action": "design",
+      "tool": {
+        "name": "Masked feature alignment and action-guided feature learning",
+        "version": ""
+      },
+      "parameters": {
+        "mask_condition": "all feature-alignment losses masked when the learning-based teacher is overridden by rules",
+        "action_guidance": "loss between model prediction and actual final decision backpropagated through frozen teacher and adapters",
+        "rule_examples": "emergency braking and safety overrides"
+      },
+      "observation": "The training objective incorporated both teacher knowledge and hand-crafted safety priors, avoiding contradictory supervision between feature imitation of a wrong teacher state and action imitation of the corrected rule output.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] The complete system combines a large multi-sensor perception network, BEV segmentation, adapters, a frozen teacher, and multiple losses. [Gap] Implementation choices and training hyperparameters determine whether the closed-loop policy can be trained stably on the collected CARLA data. [Decision] Train DriveAdapter with OpenMMLab/PyTorch components, ImageNet-pretrained backbones where applicable, AdamW, cosine decay, and fixed teacher weights.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "OpenMMLab + PyTorch training pipeline",
+        "version": ""
+      },
+      "parameters": {
+        "image_backbone": "ResNet50",
+        "image_neck": "PAFPN",
+        "image_size_for_network": "450x800",
+        "lidar_pipeline": "HardSimpleVFE, SparseEncoder, SECOND, SECONDFPN from mmdetection3D",
+        "optimizer": "AdamW",
+        "learning_rate": "1e-4",
+        "weight_decay": "1e-7",
+        "effective_batch_size": "96",
+        "training_epochs": "60",
+        "gradient_clip_L2_norm": "35",
+        "hidden_dimension": "256 at most places",
+        "total_parameters": "135M",
+        "MACs": "1719G",
+        "inference_GPU_memory": "around 5G"
+      },
+      "observation": "A full DriveAdapter model was trained end-to-end except for the frozen Roach teacher, with losses weighted so each was around 1 at the beginning of training and with image augmentations including random color transformation and random crop.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] The target claim is closed-loop driving performance, not only perception accuracy. CARLA benchmarks measure Driving Score, Route Completion, and Infraction Score. [Gap] The authors needed to show that the frozen-teacher-plus-adapter paradigm works under the same raw-sensor evaluation constraint as prior methods. [Decision] Evaluate DriveAdapter on Town05 Long and Longest6 against published methods, including limited-data and extra-data settings and an optional TCP dual-output trajectory trick.",
+      "action": "analysis",
+      "tool": {
+        "name": "CARLA closed-loop benchmark evaluation: Town05 Long and Longest6",
+        "version": "CARLA 0.9.10.1"
+      },
+      "parameters": {
+        "metrics": "Driving Score = Route Completion x Infraction Score; Route Completion; Infraction Score",
+        "limited_training_data": "189K frames",
+        "extra_training_data": "2M frames, marked with *",
+        "evaluation_privileged_information": "prohibited; raw sensors only",
+        "optional_safety_variant": "DriveAdapter + TCP dual output trajectory prediction head"
+      },
+      "observation": "On Town05 Long, DriveAdapter achieved DS 61.7, RC 92.3, IS 0.69; DriveAdapter + TCP achieved DS 65.9, RC 94.4, IS 0.72; DriveAdapter + TCP* achieved DS 71.9, RC 97.3, IS 0.74. On Longest6, DriveAdapter achieved DS 59.4, RC 82.0, IS 0.68; DriveAdapter + TCP achieved DS 62.0, RC 82.3, IS 0.70; DriveAdapter + TCP* achieved DS 71.4, RC 88.2, IS 0.85.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] DriveAdapter's main technical claim depends on the combination of feature alignment, masking, and action loss. [Gap] Closed-loop gains could come from only one component or from the perception backbone rather than the proposed loss design. [Decision] Ablate the adapter loss terms on Town05 Long using the 189K-frame training setting.",
+      "action": "analysis",
+      "tool": {
+        "name": "Loss-term ablation on Town05 Long",
+        "version": ""
+      },
+      "parameters": {
+        "benchmark": "Town05 Long",
+        "training_data": "189K frames",
+        "ablated_terms": "feature alignment loss, mask for feature alignment, action loss"
+      },
+      "observation": "Full DriveAdapter achieved DS 61.7, RC 92.3, IS 0.69. Without feature alignment loss, performance dropped to DS 45.4, RC 69.1, IS 0.66, with route-completion loss attributed to inertia-like behavior. Without the mask for feature alignment, performance dropped to DS 56.9, RC 85.4, IS 0.65 due to conflicting supervision. Without action loss, performance dropped to DS 47.1, RC 90.5, IS 0.52, with more collisions from the aggressive teacher.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] The architecture assumes adapters should be placed throughout the frozen teacher, should receive raw BEV features, and should not unfreeze the teacher. [Gap] It was necessary to verify whether these design choices are essential. [Decision] Ablate early-only adapters, late-only adapters, removal of raw BEV features, and unfreezing the teacher model.",
+      "action": "analysis",
+      "tool": {
+        "name": "Adapter-design ablation on Town05 Long",
+        "version": ""
+      },
+      "parameters": {
+        "benchmark": "Town05 Long",
+        "training_data": "189K frames",
+        "variants": "Adapter at Early Stage, Adapter at Late Stage, w/o BEV Raw Feature, Unfrozen Teacher Model"
+      },
+      "observation": "Full DriveAdapter achieved DS 61.7, RC 92.3, IS 0.69. Early-stage-only adapters achieved DS 47.2, RC 93.9, IS 0.47 and were described as reckless. Late-stage-only adapters achieved DS 54.3, RC 79.9, IS 0.69 and got stuck more often. Removing raw BEV features gave DS 34.8, RC 82.3, IS 0.43. Unfreezing the teacher gave DS 49.0, RC 73.2, IS 0.72, attributed to catastrophic forgetting during behavior cloning on limited data.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] Even with DriveAdapter, final performance remained far from perfect, with the authors reporting a Driving Score around 71 in the stronger setting. [Gap] Understanding remaining errors is necessary to identify whether failures arise from perception, teacher policy, or benchmark logic. [Decision] Perform qualitative failure-case analysis on closed-loop runs.",
+      "action": "reflection",
+      "tool": {
+        "name": "Closed-loop failure-case visualization and analysis",
+        "version": ""
+      },
+      "parameters": {
+        "failure_categories": "red-light running, intersection collision, stuck with jaywalking pedestrian",
+        "data_source": "CARLA benchmark rollouts"
+      },
+      "observation": "The authors found three major failure cases: red-light violations when a small traffic light had a green background and was hard to detect; collisions at intersections when the ego vehicle stopped too far from the stop line and then accelerated with a neighboring vehicle, a bad habit also observed in Roach; and stuck behavior when a cautious ego vehicle stopped before a jaywalking pedestrian trigger distance, causing both sides to wait forever.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "Closed-loop CARLA simulation on the public Town05 Long and Longest6 benchmarks using official CARLA metrics: Driving Score, Route Completion, and Infraction Score; plus ablations on loss terms and adapter design.",
+    "metrics": {
+      "Town05_Long_DriveAdapter_DS": {
+        "value": "61.7",
+        "unit": "Driving Score",
+        "interpretation": "Base DriveAdapter with 189K training frames substantially outperformed the direct Student Model + Frozen Roach baseline DS 8.9 and TCP DS 57.2, but was below ThinkTwice DS 65.0."
+      },
+      "Town05_Long_DriveAdapter_RC": {
+        "value": "92.3",
+        "unit": "percent route completion",
+        "interpretation": "The frozen-teacher-plus-adapter system completed most route distance on Town05 Long under raw-sensor evaluation."
+      },
+      "Town05_Long_DriveAdapter_IS": {
+        "value": "0.69",
+        "unit": "Infraction Score",
+        "interpretation": "Safety/infraction performance was competitive with behavior-cloning baselines but still left room for improvement."
+      },
+      "Town05_Long_DriveAdapter_TCP_DS": {
+        "value": "65.9",
+        "unit": "Driving Score",
+        "interpretation": "Adding the TCP dual-output trajectory trick made the limited-data variant exceed ThinkTwice DS 65.0 on Town05 Long."
+      },
+      "Town05_Long_DriveAdapter_TCP_star_DS": {
+        "value": "71.9",
+        "unit": "Driving Score",
+        "interpretation": "With 2M extra training frames, DriveAdapter + TCP set a higher Town05 Long score than ThinkTwice* DS 70.9 reported in the table."
+      },
+      "Longest6_DriveAdapter_DS": {
+        "value": "59.4",
+        "unit": "Driving Score",
+        "interpretation": "Base DriveAdapter was competitive on the harder Longest6 benchmark, above Transfuser DS 56.7 but below ThinkTwice DS 61.3."
+      },
+      "Longest6_DriveAdapter_TCP_star_DS": {
+        "value": "71.4",
+        "unit": "Driving Score",
+        "interpretation": "With TCP dual output and 2M frames, DriveAdapter achieved the best reported Longest6 Driving Score in the table."
+      },
+      "perception_baseline_mIoU": {
+        "value": "0.35",
+        "unit": "mIoU",
+        "interpretation": "Even a strong BEVFusion + Mask2Former perception baseline produced BEV segmentation with a large distribution gap, motivating adapters."
+      },
+      "direct_student_frozen_roach_DS": {
+        "value": "8.9",
+        "unit": "Driving Score",
+        "interpretation": "Naively feeding predicted BEV segmentation into frozen Roach failed badly, showing that simple perception-to-teacher input replacement was insufficient."
+      }
+    },
+    "final_verdict": "The original goal was met substantially. DriveAdapter broke the behavior-cloning-only student paradigm by preserving a frozen RL teacher for planning and using adapters to bridge predicted perception to the teacher feature space. The naive direct baseline scored only DS 8.9 on Town05 Long, whereas DriveAdapter reached DS 61.7 and DriveAdapter + TCP reached DS 65.9 with the 189K-frame setting; with 2M frames, DriveAdapter + TCP reached DS 71.9 on Town05 Long and DS 71.4 on Longest6. The method achieved state-of-the-art or competitive closed-loop scores in the reported comparisons, although remaining failures in traffic-light perception, teacher habits, and over-conservative interactions showed that perfect driving was not achieved."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Directly feeding BEVFusion + Mask2Former predicted BEV segmentation into frozen Roach gave poor driving performance.",
+      "diagnosis": "The predicted BEV segmentation had only mIoU 0.35 on unseen test scenes and exhibited incomplete/blurry agents and lanes plus wrong traffic-light states. Roach had only seen ground-truth BEV during training, so the distribution gap caused severe closed-loop degradation.",
+      "correction": "Introduce DriveAdapter modules with layer-wise Smooth L1 feature alignment to transform predicted/student features toward ground-truth teacher feature distributions."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Pure feature imitation of the teacher would also imitate teacher mistakes when hand-crafted rules override Roach.",
+      "diagnosis": "The learning-based Roach teacher itself sometimes violates safety rules; Roach + Rule improved Town05 Long DS from 74.2 to 87.0, showing that the teacher was not a perfect upper bound.",
+      "correction": "Mask all feature-alignment losses when rules override the teacher and apply action-guided learning so adapters learn features leading to the rule-corrected action."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Removing feature alignment loss caused closed-loop performance to drop to DS 45.4 and RC 69.1.",
+      "diagnosis": "Without feature alignment, adapter supervision came mainly from action loss, making training resemble behavior cloning and reintroducing inertia-like route-completion failures.",
+      "correction": "Keep layer-wise feature alignment so the model can exploit the frozen teacher's driving knowledge rather than learning planning only from actions."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Removing the feature-alignment mask reduced performance to DS 56.9, RC 85.4, IS 0.65.",
+      "diagnosis": "For teacher-error cases, action loss and feature-alignment loss gave conflicting supervision because feature alignment tried to recover features that led to an overridden teacher decision.",
+      "correction": "Apply masks to feature-alignment losses whenever the teacher is taken over by rules."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Removing action loss reduced performance to DS 47.1 and IS 0.52.",
+      "diagnosis": "The model became more collision-prone because it lacked supervision from hand-crafted safety-rule decisions and inherited the relatively aggressive teacher behavior.",
+      "correction": "Retain action-guided feature learning to inject rule-based safety priors into the adapters."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Adapter placement and information-source ablations degraded performance.",
+      "diagnosis": "Early-stage-only adapters were reckless with IS 0.47, likely due to cumulative errors at late stages. Late-stage-only adapters had lower RC 79.9 and got stuck more often, likely because late features lacked scene detail. Removing raw BEV features left only blurry predicted BEV segmentation and dropped to DS 34.8.",
+      "correction": "Use adapters after both early 2D and late 1D teacher layers and feed downsampled raw BEV features to each adapter."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Unfreezing the teacher model reduced performance to DS 49.0 and RC 73.2.",
+      "diagnosis": "Behavior-cloning-style finetuning on the limited dataset caused catastrophic forgetting of knowledge learned by the teacher through large-scale reinforcement learning.",
+      "correction": "Freeze all teacher modules and train only the perception and adapter components."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "DriveAdapter still ran red lights in some cases.",
+      "diagnosis": "The controlling traffic light could be small in the front camera and have a green background, making it extremely difficult for the perception model to detect; the issue is known in the community.",
+      "correction": "Scaling from 189K to 2M frames alleviated the problem; the authors also suggested using a dedicated traffic-light camera and neural network as in prior work."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "DriveAdapter collided at an intersection when starting after a traffic-light change.",
+      "diagnosis": "The ego vehicle stopped too far from the stop line; when the light turned green, it and a neighboring vehicle accelerated at the same time. The authors identified this as a bad habit of the Roach teacher that also occurs in Roach.",
+      "correction": "Use a better learning-based teacher model to improve this decision-making behavior."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "DriveAdapter could get stuck in a jaywalking-pedestrian scenario.",
+      "diagnosis": "The benchmark pedestrian crosses only when the ego vehicle is within a threshold distance. A cautious ego vehicle may stop before reaching that threshold, so both the pedestrian and ego vehicle wait forever.",
+      "correction": "The authors noted possible remedies: change pedestrian logic, though this could make comparisons unfair, or add object detection and creeping behavior when no obstacle is around as in prior work, though this may increase violations or collisions."
+    }
+  ]
+}

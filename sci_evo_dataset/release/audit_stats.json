@@ -1,0 +1,117 @@
+{
+  "L1": {
+    "counts": {
+      "total": 6010,
+      "ok": 6010
+    },
+    "domains": {
+      "chemistry": 180,
+      "physics": 616,
+      "medicine": 1058,
+      "materials": 179,
+      "cs": 2955,
+      "earth_science": 151,
+      "biology": 871
+    },
+    "parse_tools": {
+      "none": 1758,
+      "docling": 3011,
+      "mineru_pipeline": 1096,
+      "mineru_cloud": 145
+    },
+    "mean_steps": 8.198835274542429,
+    "mean_failures": 2.9584026622296173,
+    "failure_modes_by_tool": {
+      "none": {
+        "n": 1758,
+        "mean_failures": 0.56,
+        "pct_zero": 67.4
+      },
+      "docling": {
+        "n": 3011,
+        "mean_failures": 3.86,
+        "pct_zero": 3.4
+      },
+      "mineru_pipeline": {
+        "n": 1096,
+        "mean_failures": 4.19,
+        "pct_zero": 3.0
+      },
+      "mineru_cloud": {
+        "n": 145,
+        "mean_failures": 4.01,
+        "pct_zero": 5.5
+      }
+    },
+    "invalid_count": 0,
+    "invalid_examples": []
+  },
+  "L2": {
+    "counts": {
+      "total": 3057,
+      "ok": 3057
+    },
+    "drivers": {
+      "?": 1283,
+      "mechanism": 1010,
+      "niche": 627,
+      "limitation": 125,
+      "observation": 12
+    },
+    "failure_recovery": 571,
+    "structural_dynamics": {
+      "Mutation": 310,
+      "Speciation": 762,
+      "Niche Competition": 68,
+      "Hybridization": 188,
+      "Adaptive Radiation": 446
+    },
+    "narrative_dynamics": {
+      "Niche Competition": 206,
+      "Adaptive Radiation": 300,
+      "Speciation": 169,
+      "Hybridization": 216,
+      "Mutation": 392
+    },
+    "n_with_structural_dynamics": 1774,
+    "n_with_narrative_dynamics": 1283
+  },
+  "L3": {
+    "counts": {
+      "total": 1515,
+      "ok": 1515
+    },
+    "domains": {
+      "cs": 829,
+      "earth_science": 98,
+      "biology": 79,
+      "physics": 72,
+      "materials": 85,
+      "medicine": 60,
+      "chemistry": 98,
+      "CS": 38,
+      "energy": 24,
+      "mathematics": 20,
+      "information_science": 24,
+      "neuroscience": 26,
+      "life_science": 38,
+      "astronomy": 23,
+      "economics": 1
+    },
+    "mean_papers_per_chain": 8.566996699669968,
+    "min_len": 4,
+    "max_len": 15
+  },
+  "L4": {
+    "counts": {
+      "total": 2468,
+      "ok": 2468
+    },
+    "archetypes": {
+      "W3_multi_paper_synthesis": 1024,
+      "W2_single_paper_extension": 1021,
+      "W6_cross_domain_bridge": 423
+    }
+  },
+  "ts": "2026-05-30T13:07:07Z"
+}

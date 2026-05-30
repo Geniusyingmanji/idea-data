@@ -1,0 +1,338 @@
+{
+  "paper_id": "paper:graphcast_learning_skillful_medium_range_global_weather_fore:2022",
+  "title": "GraphCast: Learning skillful medium-range global weather forecasting",
+  "year": 2022,
+  "domain": "physics",
+  "venue": "arXiv.org",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/2795_7dff3280beed4cef96265350074498bf142c41e7/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "GraphCast, a machine-learning global medium-range weather forecasting model producing 10-day deterministic forecasts at 0.25° latitude/longitude resolution",
+    "input_data": "ECMWF ERA5 reanalysis for 1979–2017 for training, represented on a 0.25° latitude-longitude grid of 721 x 1440 = 1,038,240 points. Each weather state contains 5 surface variables and 6 atmospheric variables on 37 pressure levels, totaling 227 variables per grid point and 235,680,480 values per state. Inputs are the two most recent weather states, at the current time and 6 hours earlier. Evaluation used held-out data from 2018 onward, HRES forecasts, HRES-fc0 analysis-like data, TIGGE operational tropical cyclone tracks, and IBTrACS Version 4 cyclone tracks.",
+    "user_intent": "Traditional numerical weather prediction systems such as ECMWF HRES are highly accurate but improve mainly through expert-designed physical models and increased compute, not by directly learning from large archives of historical weather data. Existing ML weather-prediction systems had mostly been demonstrated at coarser than 1.0° resolution, for a handful of variables, or shorter lead times, and did not yet clearly surpass the best operational deterministic medium-range systems.",
+    "quantifiable_goal": "Generate global 10-day forecasts at 0.25° resolution in under 1 minute on a single Google Cloud TPU v4 device, and outperform HRES across a large verification set of 1380 variable-level-lead-time targets using RMSE and ACC."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] ECMWF HRES produces global 10-day deterministic forecasts at 0.1° resolution in around an hour and was the leading operational deterministic medium-range system. Prior ML weather models had shown progress but mostly at coarser resolutions or for fewer variables and lead times. [Gap] There was no demonstrated ML system that could learn directly from reanalysis data and broadly exceed HRES skill for global 10-day medium-range forecasting. [Decision] Frame the task as learned simulation from historical reanalysis data, while benchmarking directly against HRES on a scorecard-style operational verification set.",
+      "action": "literature_check",
+      "tool": {
+        "name": "WeatherBench and ECMWF Scorecard-style evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "forecast_horizon": "10 days",
+        "target_resolution": "0.25° latitude/longitude",
+        "baseline": "ECMWF HRES deterministic forecast",
+        "headline_metrics": "RMSE and ACC"
+      },
+      "observation": "The authors identified a benchmark gap: MLWP methods were approaching IFS/HRES only for selected variables and lead times, while HRES remained the strongest deterministic operational baseline.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Weather forecasting is a dynamical prediction problem in which recent atmospheric states determine near-future states. [Gap] A data-driven system needed an input-output representation that covered many meteorological fields globally while remaining compatible with autoregressive rollout. [Decision] Represent each weather state on the ERA5 0.25° grid and train a model to map the two latest 6-hour-spaced states to the next 6-hour state, then roll the model forward autoregressively.",
+      "action": "design",
+      "tool": {
+        "name": "Autoregressive 6-hour weather-state prediction formulation",
+        "version": ""
+      },
+      "parameters": {
+        "grid_shape": "721 x 1440",
+        "surface_variables": "5: 2T, 10u, 10v, MSL, TP",
+        "atmospheric_variables": "6 variables on 37 pressure levels: T, u, v, z, Q, w",
+        "variables_per_grid_point": "227",
+        "input_times": "t and t-6 h",
+        "prediction_step": "t+6 h",
+        "rollout_horizon": "up to 10 days"
+      },
+      "observation": "The resulting state representation contained 235,680,480 values per weather state and supported iterative rollout by feeding GraphCast predictions back as inputs.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Graph neural network learned simulators had previously modeled complex fluid-like dynamics and partial-differential-equation systems. [Gap] A latitude-longitude grid alone is not spatially homogeneous on the sphere and makes efficient long-range propagation difficult. [Decision] Build GraphCast as an encode-process-decode GNN using a spatially homogeneous multi-mesh graph derived from refined icosahedral meshes.",
+      "action": "design",
+      "tool": {
+        "name": "Encode-process-decode graph neural network with multi-mesh message passing",
+        "version": ""
+      },
+      "parameters": {
+        "model_parameters": "36.7 million",
+        "base_mesh": "regular icosahedron with 12 nodes, 20 faces, 30 edges",
+        "mesh_refinements": "6",
+        "finest_mesh_nodes": "40,962",
+        "multi_mesh_edges": "union of edges from refinement levels M0 to M6",
+        "encoder_layers": "1 GNN layer",
+        "processor_layers": "16 unshared GNN layers",
+        "decoder_layers": "1 GNN layer",
+        "output_form": "residual update to most recent input state",
+        "normalization": "input variables normalized to zero mean and unit variance; target residual normalized to unit variance"
+      },
+      "observation": "The architecture mapped local grid regions to multi-mesh nodes, propagated information through learned message passing over edges of multiple spatial scales, and decoded back to the latitude-longitude grid.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] ERA5 provides a long, globally consistent reanalysis archive suitable for supervised learning. [Gap] Training only one step ahead can yield poor long-horizon autoregressive forecasts because errors compound. [Decision] Train GraphCast on 39 years of ERA5 using an autoregressive MSE objective and increase the number of rollout steps in the loss from short to longer horizons.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Backpropagation and gradient descent on Cloud TPU v4",
+        "version": ""
+      },
+      "parameters": {
+        "training_data_years": "1979–2017",
+        "training_data_duration": "39 years",
+        "loss": "mean squared error weighted by vertical level",
+        "autoregressive_loss_steps": "N increased incrementally from 1 to 12",
+        "loss_horizon_range": "6 hours to 3 days",
+        "hardware": "32 Cloud TPU v4 devices",
+        "parallelism": "batch parallelism",
+        "training_time": "roughly 4 weeks"
+      },
+      "observation": "Training produced a GraphCast model that predicts the next 6-hour state and can be rolled out to produce 10-day forecasts; inference for a 10-day forecast runs in under 1 minute on a single Google Cloud TPU v4 device.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Directly comparing forecasts is complicated because ERA5 and HRES use different data-assimilation windows, and HRES would have nonzero error at step 0 if evaluated against ERA5. [Gap] A naive evaluation could give one method privileged observational information. [Decision] Use ERA5 as GraphCast ground truth, construct HRES-fc0 as HRES ground truth, restrict initialization times and target lead times to align assimilation lookahead, and evaluate with RMSE and ACC.",
+      "action": "analysis",
+      "tool": {
+        "name": "Fair verification protocol with ERA5 and HRES-fc0",
+        "version": ""
+      },
+      "parameters": {
+        "test_period": "2018 onward",
+        "graphcast_ground_truth": "ERA5",
+        "hres_ground_truth": "HRES-fc0",
+        "graphcast_initializations": "06z and 18z",
+        "excluded_initializations": "00z and 12z for GraphCast main fair comparison",
+        "target_interval": "every 12 hours",
+        "evaluated_variable_level_combinations": "69",
+        "lead_times": "20 lead times from 12 hours to 10 days",
+        "verification_targets": "1380",
+        "metrics": "RMSE and ACC"
+      },
+      "observation": "The evaluation avoided mismatched future-observation lookahead: ERA5 and HRES inputs/targets were chosen so both had comparable +3 h observational lookahead at verified times.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] The main claim required showing broad forecast skill, not only improvement on one headline variable. [Gap] The model needed to be compared against HRES across many variables, pressure levels, and lead times. [Decision] Evaluate GraphCast versus HRES on z500 and the full 1380-target scorecard using RMSE skill scores, ACC, confidence intervals, and significance tests.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "RMSE skill score and ACC forecast verification",
+        "version": ""
+      },
+      "parameters": {
+        "headline_variable": "z500, geopotential at 500 hPa",
+        "scorecard_targets": "1380",
+        "significance_threshold": "p <= 0.05",
+        "nominal_sample_size": "n in {729, 730}",
+        "forecast_year_for_main_scorecard": "2018"
+      },
+      "observation": "GraphCast showed z500 RMSE skill-score improvements of about 7%–14% over HRES across lead times. Across all 1380 targets, GraphCast outperformed HRES on 90.3% and significantly outperformed HRES on 89.9%. HRES advantages were disproportionately localized in the stratosphere; excluding 50 hPa, GraphCast significantly outperformed HRES on 96.9% of 1280 targets, and excluding 50 and 100 hPa it did so on 99.7% of 1180 targets.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] MSE-trained deterministic models can reduce RMSE at long lead times by producing spatially smoothed forecasts, whereas physical NWP forecasts are not blurred in the same way. [Gap] GraphCast's RMSE advantage might be partly explained by this smoothing rather than better forecast information. [Decision] Fit optimal blurring filters separately to GraphCast and HRES forecasts and compare skill after both methods are allowed to blur.",
+      "action": "analysis",
+      "tool": {
+        "name": "Optimally fitted spherical blurring filters for RMSE comparison",
+        "version": ""
+      },
+      "parameters": {
+        "optimization_target": "minimize RMSE with respect to each model's own ground truth",
+        "models_blurred": "GraphCast and HRES",
+        "verification_targets": "1380"
+      },
+      "observation": "Optimally blurred GraphCast retained greater skill than optimally blurred HRES on 88.0% of the 1380 verification targets, supporting the conclusion that the main scorecard result was not solely due to GraphCast blur.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Another high-performing ML weather model, Pangu-Weather, had reported results on a smaller set of targets. [Gap] GraphCast also needed to be positioned relative to competing MLWP systems, not only HRES. [Decision] Compare GraphCast with Pangu-Weather on the target set reported by Pangu-Weather.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "GraphCast versus Pangu-Weather target-set comparison",
+        "version": ""
+      },
+      "parameters": {
+        "baseline_ml_model": "Pangu-Weather",
+        "comparison_targets": "252"
+      },
+      "observation": "GraphCast outperformed Pangu-Weather on 99.2% of the 252 targets presented for Pangu-Weather.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Operational value depends not only on aggregate RMSE but also on downstream severe-event prediction. Tropical cyclone tracks can be derived from forecasts of geopotential, winds, and mean sea-level pressure. [Gap] GraphCast was not specifically trained for cyclone tracking, and a tracker tuned for HRES 0.1° forecasts might not transfer directly to 0.25° GraphCast fields. [Decision] Implement an ECMWF-protocol-based cyclone tracker, tune tracker hyperparameters on validation data, apply it to GraphCast forecasts, and compare against HRES TIGGE operational tracks using IBTrACS as reference.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "ECMWF-protocol-based tropical cyclone tracking algorithm",
+        "version": ""
+      },
+      "parameters": {
+        "graphcast_fields_used": "z, 10u, 10v, u, v, msl",
+        "hres_track_source": "TIGGE archive operational tracks from 0.1° HRES forecasts",
+        "reference_tracks": "IBTrACS Version 4",
+        "evaluation_years": "2018–2021",
+        "event_filter": "evaluate tracks when both GraphCast and HRES detect a cyclone",
+        "confidence_intervals": "bootstrapped 95% confidence intervals for median and median paired difference",
+        "wind_steering_weight_search": "0.0, 0.1, 0.33, 0.5",
+        "vicinity_radius_search": "278 km times factors 0.25, 0.375, 0.5, 0.625, 0.75, 1.0",
+        "angle_filter_search": "90°, 135°, 150°, 165°, 175°, 180°",
+        "jump_clipping_search": "445 km times factors 0.25, 0.5, 1.0, 2.0, 4.0, infinity"
+      },
+      "observation": "GraphCast had lower median tropical cyclone track error than HRES over 2018–2021 and was significantly better in paired error difference for lead times from 18 hours to 4.75 days. The tracker applied to GraphCast dropped a similar number of cyclones as HRES on validation data.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] Atmospheric rivers and extreme temperatures are societally important severe events, but GraphCast was not trained specifically for them. IVT can be derived from specific humidity and horizontal wind, and temperature extremes can be framed as imbalanced binary classification relative to climatology. [Gap] The authors needed to test whether GraphCast's general forecasts retained value for these derived hazards. [Decision] Compute IVT from predicted humidity and winds over a common pressure-level subset, and evaluate extreme heat/cold precision-recall using climatological percentile thresholds.",
+      "action": "analysis",
+      "tool": {
+        "name": "Derived IVT RMSE and extreme-temperature precision-recall evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "ivt_formula_constant_g": "9.80665 m/s^2",
+        "ivt_pressure_bottom": "1000 hPa",
+        "ivt_pressure_top": "300 hPa",
+        "common_ivt_pressure_levels": "300, 400, 500, 600, 700, 850, 925, 1000 hPa",
+        "ivt_region": "coastal North America and Eastern Pacific, 180°W to 110°W and 10°N to 60°N",
+        "ivt_season": "cold months, Oct–Apr",
+        "extreme_heat_threshold": "top 2% climatology for 2T",
+        "extreme_heat_lead_times": "12 hours, 5 days, 10 days",
+        "gain_range_for_precision_recall": "0.8 to 4.5",
+        "climatology_years": "2016–2021"
+      },
+      "observation": "GraphCast improved IVT prediction relative to HRES by about 25% at short lead time and about 10% at longer horizons. For extreme heat, GraphCast precision-recall curves were above HRES at 5-day and 10-day lead times, while HRES was better at 12 hours, consistent with near-zero GraphCast-over-HRES 2T skill score at that short lead.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 11,
+      "thought": "[Background] Unlike fixed physical model formulations, an ML weather model can be periodically retrained on more recent reanalysis data. [Gap] It was unknown whether extending the training data closer to the test period would improve forecast skill. [Decision] Train four GraphCast variants using data beginning in 1979 but ending before 2018, 2019, 2020, or 2021, then evaluate them on 2021 z500 forecasts.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "GraphCast retraining with progressively more recent ERA5 data",
+        "version": ""
+      },
+      "parameters": {
+        "training_start_year": "1979",
+        "training_end_variants": "before 2018, before 2019, before 2020, before 2021",
+        "test_year": "2021",
+        "evaluated_variable": "z500",
+        "normalization_baseline": "GraphCast trained up to before 2018"
+      },
+      "observation": "GraphCast trained only up to before 2018 remained competitive with HRES on 2021 data, and training up to before 2021 further improved z500 skill scores, suggesting a beneficial training-data recency effect.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "GraphCast was verified on held-out data from 2018 onward using RMSE and ACC against ERA5, with HRES evaluated against HRES-fc0 to avoid unfair step-0 errors. The main scorecard covered 69 variable-level combinations over 20 lead times, totaling 1380 targets. Additional validation included optimally blurred comparisons, Pangu-Weather comparison, tropical cyclone tracking against IBTrACS, IVT RMSE for atmospheric rivers, extreme-temperature precision-recall curves, and retraining-on-recent-data tests.",
+    "metrics": {
+      "forecast_runtime": {
+        "value": "<1",
+        "unit": "minute per 10-day forecast on one Google Cloud TPU v4",
+        "interpretation": "GraphCast met the efficiency goal for producing global 10-day forecasts far faster than the roughly hour-scale HRES run described in the paper."
+      },
+      "scorecard_targets_outperformed": {
+        "value": "90.3",
+        "unit": "% of 1380 targets",
+        "interpretation": "GraphCast had lower RMSE than HRES for most evaluated variable-level-lead-time targets."
+      },
+      "scorecard_targets_significantly_outperformed": {
+        "value": "89.9",
+        "unit": "% of 1380 targets at p <= 0.05",
+        "interpretation": "Most of GraphCast's improvements over HRES were statistically significant under the paper's significance testing."
+      },
+      "z500_rmse_skill_score_improvement": {
+        "value": "7–14",
+        "unit": "%",
+        "interpretation": "For the headline z500 field, GraphCast improved RMSE skill score over HRES across lead times."
+      },
+      "targets_significantly_outperformed_excluding_50hPa": {
+        "value": "96.9",
+        "unit": "% of 1280 targets",
+        "interpretation": "When the lowest-weighted stratospheric 50 hPa level was removed, GraphCast's significant advantage over HRES became more comprehensive."
+      },
+      "targets_significantly_outperformed_excluding_50hPa_and_100hPa": {
+        "value": "99.7",
+        "unit": "% of 1180 targets",
+        "interpretation": "Removing the 50 and 100 hPa levels left almost all remaining targets significantly favoring GraphCast."
+      },
+      "optimally_blurred_targets_outperformed": {
+        "value": "88.0",
+        "unit": "% of 1380 targets",
+        "interpretation": "GraphCast retained an advantage even when both GraphCast and HRES forecasts were allowed to use RMSE-optimized blurring filters."
+      },
+      "pangu_weather_targets_outperformed": {
+        "value": "99.2",
+        "unit": "% of 252 targets",
+        "interpretation": "GraphCast outperformed the competing Pangu-Weather ML model on nearly all comparable reported targets."
+      },
+      "tropical_cyclone_significant_lead_range": {
+        "value": "18 hours to 4.75 days",
+        "unit": "lead-time interval",
+        "interpretation": "GraphCast had significantly better paired tropical cyclone track error than HRES over this lead-time range."
+      },
+      "ivt_short_lead_improvement": {
+        "value": "25",
+        "unit": "%",
+        "interpretation": "GraphCast improved atmospheric-river IVT RMSE relative to HRES at short lead time."
+      },
+      "ivt_long_horizon_improvement": {
+        "value": "10",
+        "unit": "%",
+        "interpretation": "GraphCast retained a smaller but positive IVT RMSE improvement relative to HRES at longer horizons."
+      }
+    },
+    "final_verdict": "The original goal was met: GraphCast produced global 10-day forecasts at 0.25° resolution in under one minute on a single TPU v4 and substantially outperformed HRES on the main 1380-target deterministic verification scorecard. The success was broad but not uniform: HRES retained advantages in parts of the stratosphere and at 12-hour extreme-heat precision-recall, while GraphCast showed strong aggregate skill, strong efficiency, better downstream cyclone and atmospheric-river performance, and improved long-lead extreme-temperature classification."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 6,
+      "what_failed": "GraphCast did not outperform HRES uniformly; HRES performed better on some targets, especially in the stratosphere.",
+      "diagnosis": "The regions where HRES had better performance were disproportionately localized in the stratosphere, and these levels had the lowest training-loss weight.",
+      "correction": "The authors quantified the effect by excluding the 50 hPa level and then both 50 and 100 hPa levels, showing significant GraphCast outperformance rose to 96.9% of 1280 targets and 99.7% of 1180 targets, respectively."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Longer-lead GraphCast forecasts became spatially blurrier.",
+      "diagnosis": "The autoregressive MSE objective encouraged the deterministic model to express increasing uncertainty by predicting spatially smoothed outputs at longer lead times.",
+      "correction": "The authors tested whether this explained the RMSE advantage by fitting optimal blurring filters to both GraphCast and HRES; optimally blurred GraphCast still outperformed optimally blurred HRES on 88.0% of targets. They identified explicit uncertainty modeling as a crucial next step."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "The tropical cyclone tracker's original wind-steering component sometimes hindered next-step track estimates on GraphCast forecasts.",
+      "diagnosis": "GraphCast predicts winds at 0.25° resolution, and the wind field is not spatially smooth; the tracker was likely tailored to exploit 0.1° HRES predictions.",
+      "correction": "The authors hyperparameter-searched the weighting between linear extrapolation and wind steering over 0.0, 0.1, 0.33, and 0.5, instead of relying on the original 0.5 value."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Multiple cyclone mis-tracks occurred when tracks sharply reversed course or made large jumps.",
+      "diagnosis": "Sharp reversals and large jumps were associated with noisy wind steering and difficulty discerning features for weak cyclones.",
+      "correction": "The authors searched angle filters of 90°, 135°, 150°, 165°, 175°, and 180°, and searched clipping thresholds based on 445 km times factors 0.25, 0.5, 1.0, 2.0, 4.0, and infinity."
+    },
+    {
+      "step_index_ref": 10,
+      "what_failed": "GraphCast did not beat HRES for extreme heat prediction at the 12-hour lead time.",
+      "diagnosis": "The paper reports this as consistent with GraphCast's 2T skill score over HRES being near zero at that short lead time.",
+      "correction": "The authors reported the lead-time-dependent behavior rather than modifying the model; GraphCast's precision-recall curves were superior at 5-day and 10-day lead times."
+    }
+  ]
+}

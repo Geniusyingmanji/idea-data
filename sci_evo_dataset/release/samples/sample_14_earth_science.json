@@ -1,0 +1,269 @@
+{
+  "paper_id": "paper:sensing_earth_and_environment_dynamics_by_telecommunication:2020",
+  "title": "Sensing Earth and environment dynamics by telecommunication fiber-optic sensors: an urban experiment in Pennsylvania, USA",
+  "year": 2020,
+  "domain": "earth_science",
+  "venue": "Solid Earth",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/15084_08482f91537233e68351c864df7094cbf59d3a59/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "Penn State FORESEE, a continuous distributed acoustic sensing dark-fiber array for urban near-surface seismic and environmental monitoring in Pennsylvania, USA",
+    "input_data": "Nearly 5 km of pre-existing dark telecommunication fiber under the Pennsylvania State University campus, consisting of two spliced fiber-optic sections around channel 1340, buried in concrete conduits at roughly 1 m depth; a Silixa iDAS2 interrogator connected with an E2000 APC connector; 500 Hz sampling frequency, 10 m gauge length, 2 m channel spacing, 2137 channels after location interpolation; GPS timing, NAS storage, and comparison data from nearby seismic stations PSRS and SSPA plus a 24-channel geophone active-source survey.",
+    "user_intent": "Traditional dense seismic geophone arrays are difficult to deploy and maintain in urban areas because of cost, permission, security, power, and data-transfer limitations. The authors wanted to test whether existing telecommunication dark fiber could provide dense, long-term, broadband monitoring of urban earthquakes, weather-induced ground motion, hydrologic or geohazard-related signals, and anthropogenic sources in the eastern USA.",
+    "quantifiable_goal": "Deploy and operate an approximately 5 km DAS array continuously for about 1 year, generating roughly 75-76 TB of data, with dense 2 m channel spacing and 500 Hz sampling, and verify broadband vibration sensing from approximately 0.01 to 250 Hz by comparison with seismometers, geophones, and identifiable natural and anthropogenic seismic sources."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Prior DAS dark-fiber studies in California and other settings showed that telecommunication fiber in conduits can record earthquakes and near-surface signals, but no comparable continuous DAS dark-fiber array had been deployed in the eastern USA. [Gap] Urban Pennsylvania has heterogeneous near-surface geology, strong seasonal temperature and precipitation variation, karst-related hazards, and relatively sparse seismicity, so the reproducibility and usefulness of dark-fiber DAS there were unknown. [Decision] Select an existing Penn State campus dark-fiber route to maximize spatial aperture, resolution, access, and directional diversity while minimizing deployment cost and disturbance.",
+      "action": "design",
+      "tool": {
+        "name": "Penn State telecommunication dark-fiber route selection",
+        "version": ""
+      },
+      "parameters": {
+        "fiber_length": "approximately 5 km",
+        "installation_depth": "roughly 1 m",
+        "fiber_sections": "2 sections spliced around channel 1340",
+        "desired_geometry": "long aperture with at least two directions",
+        "location": "Pennsylvania State University campus, State College, Pennsylvania, USA"
+      },
+      "observation": "The authors selected a campus route of nearly 5 km of pre-existing dark fiber in buried concrete conduits, forming the FORESEE array and providing dense coverage in an urban eastern-USA environment.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] DAS can turn one fiber strand into a dense array of pseudo-seismometers by repeatedly probing axial strain rate along the cable. [Gap] Continuous year-scale acquisition produces tens of terabytes of data and requires stable timing, power, and remote storage. [Decision] Connect a Silixa iDAS2 interrogator to the dark fiber, configure dense sampling, and attach GPS timing, NAS storage, internet access, and UPS-backed power.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Silixa iDAS2 distributed acoustic sensing interrogator",
+        "version": "iDAS2"
+      },
+      "parameters": {
+        "sampling_frequency": "500 Hz",
+        "nyquist_frequency": "250 Hz",
+        "gauge_length": "10 m",
+        "channel_spacing": "2 m",
+        "connector": "E2000 APC",
+        "start_date": "5 April 2019",
+        "raw_format": "TDMS",
+        "daily_data_rate": "over 200 GB d-1",
+        "annual_raw_data_volume": "about 76 TB yr-1"
+      },
+      "observation": "The FORESEE array began continuous strain-rate recording on 5 April 2019 and was still running at paper submission; the experiment acquired about 75 TB over about 360 d, with GPS timing and remote data access through NAS storage.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Seismic array processing requires channel coordinates, but the fiber is underground and individual DAS channels cannot be directly GPS-surveyed like surface geophones. [Gap] The cable map and visible manholes did not by themselves determine precise channel-to-location mapping, and raw hammer-shot signals were often obscured by urban noise. [Decision] Use hammer-drop tap tests at known surface locations, identify responsive channels by spectral energy from Fourier transforms in short sliding windows, and interpolate locations for the full array.",
+      "action": "analysis",
+      "tool": {
+        "name": "hammer-drop tap tests with sliding-window Fourier spectral-energy analysis",
+        "version": ""
+      },
+      "parameters": {
+        "tap_test_count": "more than 101",
+        "shots_per_location": "6 hammer drops",
+        "located_channels": "101 channels",
+        "interpolated_channels": "2137 channels",
+        "channel_spacing": "2 m"
+      },
+      "observation": "Spectral-energy analysis made hammer shots identifiable and center channels relatively unambiguous. The authors obtained positions for 101 representative channels, interpolated locations for all 2137 channels, and removed some channels from later analysis where the fiber looped back on itself.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] The iDAS2 output is axial strain rate, whereas standard seismic stations record particle velocity, so a new dark-fiber array must be calibrated against conventional seismometers to verify useful low-frequency ground-motion response. [Gap] The instrument response, coupling, and directional sensitivity of the campus fiber were uncertain. [Decision] Use the 26 May 2019 Peru M8.0 teleseismic earthquake, convert DAS strain-rate records to particle velocity, and compare orthogonal DAS cable segments with the nearest broadband seismometer SSPA.",
+      "action": "analysis",
+      "tool": {
+        "name": "DAS strain-rate to particle-velocity conversion using f-k transform",
+        "version": ""
+      },
+      "parameters": {
+        "calibration_event": "Peru M8.0 earthquake on 26 May 2019",
+        "comparison_station": "SSPA broadband seismometer",
+        "station_distance": "about 17.7 km from DAS array",
+        "subarray_channels": "over 80 channels in an L-shape subarray, 40 channels in each direction",
+        "filter_band": "0.02-0.5 Hz",
+        "raw_to_strain_rate_scaling": "11.6 fs",
+        "fk_traces": "40 coherent traces",
+        "threshold_trial": "1 x 10^-5",
+        "longer_offset_test": "800 m with threshold 1 x 10^-3"
+      },
+      "observation": "After conversion and filtering, DAS particle-velocity waveforms in two orthogonal directions agreed with rotated horizontal components BH1 and BH2 at SSPA, especially for the S wave. Remaining coda-amplitude inconsistencies were attributed to gauge-length averaging, different sensor locations, directional sensitivity, unknown DAS response, and host-environment effects.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Low-frequency earthquake calibration does not establish the high-frequency response needed for near-surface active-source imaging and urban monitoring. [Gap] The high-frequency coupling of fiber in underground telecommunication conduit relative to geophones was not known. [Decision] Co-locate a geophone array directly above the fiber, record hammer-source shot gathers, and compare DAS and geophone wavefields after band-pass filtering and gain correction.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "active-source geophone-DAS comparison",
+        "version": ""
+      },
+      "parameters": {
+        "geophone_channels": "24",
+        "geophone_spacing": "4 m",
+        "filter_band": "10-60 Hz",
+        "processing": "band-pass filter and auto-gain control",
+        "fiber_depth": "roughly 1 m in conduit"
+      },
+      "observation": "The geophone data showed a direct wave of about 800 m s-1 and refraction of about 4000 m s-1, implying a first-layer depth of approximately 8 m. DAS showed more coherent waveform moveout with an apparent direct wave of about 2250 m s-1 and four possible reflections kinematically consistent with geophone data. Geophone ground roll at about 370 m s-1 was clear but was not manifested in DAS. DAS also showed energy near the hammer shot shifting downward, interpreted as possible trapped waves in a low-velocity zone such as a sinkhole, requiring future modeling for verification.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] A core purpose of FORESEE was to test whether the array could detect natural seismic sources across a broad frequency range in an eastern-USA urban environment. [Gap] It was unknown whether the Penn State dark-fiber installation could record teleseisms, regional/local earthquakes, and thunder-induced ground motion with usable signal quality. [Decision] Analyze DAS recordings of selected earthquakes and a severe thunderstorm, compare earthquake timing with nearby seismic station PSRS, manually identify thunderquake events, and compute average power spectral density across channels.",
+      "action": "analysis",
+      "tool": {
+        "name": "DAS waveform inspection and average power spectral density analysis",
+        "version": ""
+      },
+      "parameters": {
+        "earthquake_events": "Peru M8.0 on 26 May 2019; Ridgecrest M7.1 on 6 July 2019; Tennessee M3.8 on 20 January 2020; Pennsylvania M1.1 on 27 August 2019",
+        "reference_station": "PSRS",
+        "thunderstorm_date": "15 April 2019",
+        "thunderquake_window_example": "03:33-03:35 UTC",
+        "thunderquake_channels_shown": "channels 400 and 2000",
+        "manual_thunderquake_count": "more than 120 events from four severe thunderstorms from April to August 2019"
+      },
+      "observation": "DAS recorded clear P, S, and surface waves for the Peru event; clear S waves for the Ridgecrest event; weak but identifiable surface waves for the noisy Tennessee event; and two clear body-wave phases plus likely surface waves for the nearby PA M1.1 event about 10 km from the array. Thunderquake events were detected across the array, and PSD showed global-earthquake energy at 0.01-1 Hz, local/regional earthquake energy at 0.05-20 Hz, and thunderquake peaks at 10-130 Hz, supporting broadband sensitivity from about 0.01 to 250 Hz.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] DAS measures axial strain rate along the fiber, so different cable orientations should respond differently to seismic wave polarization. [Gap] Correct interpretation of multi-segment DAS waveforms requires understanding polarity and amplitude changes caused by geometry rather than source differences. [Decision] Examine the Peru M8.0 earthquake on two orthogonal straight fiber sections and compare P-wave and S-wave polarity.",
+      "action": "analysis",
+      "tool": {
+        "name": "orthogonal-fiber polarity comparison",
+        "version": ""
+      },
+      "parameters": {
+        "event": "Peru M8.0 earthquake",
+        "wave_modes_examined": "P waves and S waves",
+        "fiber_geometry": "two orthogonal straight fiber sections near a corner"
+      },
+      "observation": "The P-wave window retained the same polarity across the two orthogonal segments, while the waveform polarity flipped after the S-wave arrival. The authors interpreted this as the expected consequence of DAS axial sensitivity and the tensor nature of strain: P/Rayleigh-type motion has same polarity with orientation-dependent amplitude, whereas S/Love-type transverse motion can produce polarity flips.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Urban environments contain strong anthropogenic seismic sources that can be either useful repeatable sources or noise for subsurface imaging. [Gap] The range of human-generated signals detectable by the FORESEE array, including small sources coupled through pavement, air, or infrastructure, was not known. [Decision] Search the continuous DAS records for footsteps, quarry blasts, and live music signals, and quantify their frequency content, moveout, and spatial detectability.",
+      "action": "analysis",
+      "tool": {
+        "name": "urban anthropogenic DAS signal analysis",
+        "version": ""
+      },
+      "parameters": {
+        "footstep_filter": "1-5 Hz",
+        "footstep_field_observation_date": "15 July 2019",
+        "footstep_psd_dates": "16 April 2019, 16 February 2020, 16 April 2020",
+        "campus_psd_channels": "800-2137",
+        "edge_campus_channels_checked": "1-600",
+        "blast_filter": "1-5 Hz for quarry events; 10-20 Hz and 1-5 Hz for site 4 example",
+        "blast_site_distances": "about 31, 41, 84, and 15 km for sites 1-4",
+        "concert_date": "26 April 2019",
+        "concert_stage_channels": "channels 120-150",
+        "concert_filter": "1-150 Hz"
+      },
+      "observation": "Footsteps were detected on a quiet straight path, with walking direction and group versus individual motion visible in moveout; walking speed was about 1.2 m s-1, and noon PSD showed peaks near 2.0 and 4.0 Hz that disappeared at midnight and during the 16 April 2020 COVID-19 stay-at-home period. Quarry blasts from sites 1-3 with catalog magnitudes M1.3, M1.7, and M2.0 were visible and kinematically consistent with PSRS; a site-4 M1.0 blast about 10 km away showed high-frequency P and S waves and low-frequency transverse waves with polarity flips. Live music from the Movin' On festival produced distinctive narrow, evenly spaced spectral energy, bass-range signals of 40-140 Hz, and vibrations detected more than half a kilometer from the stage.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors verified the array through multi-source comparison and signal identification: low-frequency DAS-to-broadband-seismometer calibration using the Peru M8.0 earthquake and SSPA/PSRS stations; high-frequency active-source comparison with a co-located 24-channel geophone array; power spectral density analysis of earthquakes and thunderquakes; kinematic consistency of quarry blasts with PSRS; and identification of known anthropogenic events such as field-observed footsteps and a scheduled music festival.",
+    "metrics": {
+      "continuous_recording_duration": {
+        "value": "about 360",
+        "unit": "days",
+        "interpretation": "The FORESEE array successfully operated for approximately 1 year starting 5 April 2019."
+      },
+      "data_volume": {
+        "value": "75-76",
+        "unit": "TB",
+        "interpretation": "The system achieved year-scale continuous DAS acquisition at the expected tens-of-terabytes scale."
+      },
+      "array_length": {
+        "value": "approximately 5",
+        "unit": "km",
+        "interpretation": "The array provided wide-aperture campus-scale urban coverage using existing telecommunication fiber."
+      },
+      "channel_count": {
+        "value": "2137",
+        "unit": "channels",
+        "interpretation": "Dense channel locations were estimated after tap testing and interpolation at 2 m spacing."
+      },
+      "sampling_frequency": {
+        "value": "500",
+        "unit": "Hz",
+        "interpretation": "The DAS acquisition supported a 250 Hz Nyquist frequency for broadband seismic and anthropogenic monitoring."
+      },
+      "verified_frequency_range": {
+        "value": "0.01-250",
+        "unit": "Hz",
+        "interpretation": "PSD analysis showed sensitivity to long-period teleseismic waves, local/regional earthquakes, high-frequency thunderquakes, and urban anthropogenic sources."
+      },
+      "thunderquake_count": {
+        "value": ">120",
+        "unit": "events",
+        "interpretation": "More than 120 thunderquakes were manually identified from four severe thunderstorms from April to August 2019."
+      },
+      "footstep_frequency": {
+        "value": "2.0 and 4.0",
+        "unit": "Hz",
+        "interpretation": "Noon DAS spectra over central-campus channels showed walking-step fundamental and harmonic peaks, which disappeared at midnight and during COVID-19 stay-at-home conditions."
+      },
+      "walking_speed": {
+        "value": "about 1.2",
+        "unit": "m s-1",
+        "interpretation": "Moveout slopes in the dense DAS record allowed estimation of pedestrian walking speed."
+      },
+      "music_detection_distance": {
+        "value": ">0.5",
+        "unit": "km",
+        "interpretation": "Concert-generated vibrations were detected more than half a kilometer away from the stage."
+      }
+    },
+    "final_verdict": "The original goal was met. The authors deployed and operated an approximately 5 km urban dark-fiber DAS array for about 1 year, acquired roughly 75 TB of continuous data, calibrated its response against seismometers and geophones, and demonstrated detection of broadband natural and anthropogenic signals from about 0.01 to 250 Hz. The system was shown to be useful for continuous near-surface seismic monitoring in a populated eastern-USA setting, though limitations remained in installation coupling, single-component axial sensitivity, urban noise contamination, and some unverified interpretations such as possible low-velocity-zone trapped waves."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Hammer shots were difficult to identify directly in raw DAS recordings at many tap-test locations.",
+      "diagnosis": "Strong urban noise inhibited raw shot identification.",
+      "correction": "The authors computed spectral energy using Fourier transforms on windowed traces with a short sliding window, which made the hammer shots and center channels relatively unambiguous."
+    },
+    {
+      "step_index_ref": 4,
+      "what_failed": "DAS-to-particle-velocity waveform matching depended on the selected f-k conversion threshold, and some coda amplitudes did not perfectly match the nearby seismometer.",
+      "diagnosis": "The paper attributes this partly to ambiguous velocity scaling in the f-k transform with limited offset for a plane-wave case, plus gauge-length averaging, different DAS and station locations, directional sensitivity, unknown instrument response, and host-environment effects.",
+      "correction": "The authors chose a threshold of 1 x 10^-5 by trial and error for matching, also tested a longer 800 m offset with threshold 1 x 10^-3, and interpreted the overall waveform agreement as sufficient for low-frequency calibration."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Ground roll that was clear in the geophone gather was not manifested in the DAS active-source gather.",
+      "diagnosis": "Possible causes included the fiber being buried at shallow depth in conduit and loose contact between the fiber and conduit, reducing sensitivity to surface waves.",
+      "correction": "The authors reported the limitation and compared it with mixed results from prior experiments; no direct correction was applied in this study."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "The interpretation of downward-shifted DAS energy near the hammer shot as trapped waves in a low-velocity zone was not confirmed.",
+      "diagnosis": "The signal was consistent with possible trapped waves, for example from a sinkhole or other low-velocity zone, but the paper did not provide definitive modeling or independent subsurface confirmation.",
+      "correction": "The authors suggested that further seismic wave modeling should be conducted to verify the presence of the low-velocity zone."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "The Tennessee M3.8 earthquake appeared weak in DAS recordings and was contaminated by traffic noise.",
+      "diagnosis": "The event occurred during rush hour at 15:10 local time, producing noisy DAS records with traffic-related linear events.",
+      "correction": "Despite the contamination, the authors still identified surface waves; broader handling of such urban noise was discussed as a future processing challenge."
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+{
+  "paper_id": "paper:verigen_a_large_language_model_for_verilog_code_generation:2023",
+  "title": "VeriGen: A Large Language Model for Verilog Code Generation",
+  "year": 2023,
+  "domain": "cs",
+  "venue": "ACM Trans. Design Autom. Electr. Syst.",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/2191_b69882cb6c7367ea91224c27982277c5e643862e/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "VeriGen: fine-tuned open-source large language models, especially CodeGen-16B-FT, for generating synthesizable and functionally correct Verilog code from natural-language/pseudocode prompts",
+    "input_data": "Pre-trained LLMs including MegatronLM-355M, J1-Large-7B, CodeGen-2B, CodeGen-6B, and CodeGen-16B; public GitHub Verilog repositories queried from a Google BigQuery snapshot of over 2.8 million repositories; approximately 50K deduplicated and filtered .v files yielding about 300 MB of GitHub Verilog; 70 Verilog textbook PDFs processed into an augmented GitHub-plus-textbook corpus of 400 MB; evaluation Problem Set I with 17 hand-designed Verilog challenges and test benches; extended HDLBits-derived Problem Set II reported as 181 problems in the text and 164 problems in Table 3.",
+    "user_intent": "Existing commercial LLMs and GitHub Copilot-style systems can generate Verilog that fails syntax, synthesis, and functional checks; prior Verilog-specific work used a small synthetic template corpus that did not generalize; there was no large open Verilog training corpus or transparent benchmark for syntactic and functional correctness of LLM-generated HDL. The authors wanted smaller, open, in-house models that reduce reliance on costly, black-box commercial APIs while providing competitive Verilog code generation.",
+    "quantifiable_goal": "Generate Verilog completions from prompts and measure success by Pass@k-style compilation and functional correctness rates over n completions per prompt, with n in {1, 10, 25}, sampling temperatures t in {0.1, 0.3, 0.5, 0.7, 1}, 17 custom problems with three prompt-detail levels, and an HDLBits-derived benchmark; the implied goal was to improve compile/pass rates over the corresponding pre-trained models and be competitive with commercial LLMs such as GPT-3.5-turbo, GPT-4, and PALM2."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Transformer-based LLMs trained on natural language and code can synthesize software from prompts, and fine-tuning pre-trained models is much cheaper than training from scratch. Prior hardware-oriented work such as DAVE and evaluations of GitHub Copilot showed promise but also serious limitations. [Gap] Verilog-specific datasets and benchmarks were scarce, and existing commercial LLMs were not reliably producing syntactically and functionally correct HDL. [Decision] Frame the study as a Verilog-specialized fine-tuning and evaluation project using open-source LLMs plus transparent functional test benches.",
+      "action": "literature_check",
+      "tool": {
+        "name": "Survey of prior LLM, code-generation, and Verilog-generation work",
+        "version": ""
+      },
+      "parameters": {
+        "prior_verilog_llm": "DAVE, trained on template-based natural-language descriptions",
+        "commercial_baselines_considered": "code-davinci-002, GPT-3.5-turbo, GPT-4, PALM2",
+        "open_model_families_considered": "MegatronLM, Jurassic-1, CodeGen"
+      },
+      "observation": "The authors identified three core missing pieces: a large Verilog corpus, open fine-tuned Verilog LLM checkpoints, and an end-to-end evaluation harness for syntactic and functional correctness.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] Fine-tuning needs substantially more real Verilog than the small synthetic corpora used in earlier work. GitHub contains public hardware-design repositories, but raw code is noisy and duplicated. [Gap] The authors needed a cleaned Verilog-only corpus with duplicate and non-Verilog files removed. [Decision] Query GitHub through Google BigQuery, deduplicate with MinHash/Jaccard similarity, and filter files using Verilog module structure and file-length constraints.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Google BigQuery with MinHash and Jaccard-similarity deduplication",
+        "version": ""
+      },
+      "parameters": {
+        "github_snapshot_size": "over 2.8 million repositories",
+        "query_terms": "keyword 'Verilog' and files with .v extension",
+        "verilog_filter": "retain .v files containing at least one module and endmodule pair",
+        "large_file_filter": "remove files with number of characters >= 20K"
+      },
+      "observation": "The raw GitHub query produced about 50K .v files with size around 1 GB before large-file filtering; the final GitHub training corpus contained approximately 50K files and about 300 MB of Verilog code.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] GitHub code provides Verilog examples, but textbooks may contain explanatory prose paired with Verilog snippets, potentially improving prompt-to-code behavior. [Gap] PDF textbooks are noisy: formatting, operators, headers, and footers can be corrupted during OCR/text extraction. [Decision] Extract and clean Verilog-book text, then use regular expressions and sliding windows to form additional training examples.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "pymuPDF OCR/text extraction with regular-expression snippet extraction",
+        "version": ""
+      },
+      "parameters": {
+        "textbooks": "70 Verilog-based textbooks in PDF format",
+        "cleaning_targets": "index, preface, acknowledgments, headers, footers, malformed lines",
+        "snippet_pattern": "regular expressions centered on module ... endmodule blocks",
+        "example_generation": "overlapping sliding windows"
+      },
+      "observation": "The authors observed OCR and formatting problems, including improper line formatting, unrecognized logical operators, and header/footer text floating within extracted content. After cleaning and combining textbook-derived examples with GitHub code, the final augmented corpus size was 400 MB.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] The study needed to test whether model size and pre-training domain affect Verilog generation. The available candidates ranged from natural-language-only models to code-pretrained CodeGen models. [Gap] It was unknown whether a small or medium open model fine-tuned on Verilog could compete with much larger black-box commercial models. [Decision] Fine-tune five pre-existing LLMs spanning 355M to 16B parameters and compare them with commercial LLMs.",
+      "action": "design",
+      "tool": {
+        "name": "Baseline LLM architecture selection",
+        "version": ""
+      },
+      "parameters": {
+        "fine_tuned_models": "MegatronLM-355M, J1-Large-7B, CodeGen-2B, CodeGen-6B, CodeGen-16B",
+        "CodeGen_context_length": "2048 tokens",
+        "J1_Large_context_length": "4096 tokens",
+        "MegatronLM_context_length": "1024 tokens",
+        "commercial_comparison_models": "code-davinci-002, GPT-3.5-turbo, GPT-4, PALM2"
+      },
+      "observation": "The chosen fine-tuning set covered natural-language-pretrained and code-pretrained models with parameter counts from 355M to 16B, enabling analysis of fine-tuning and scaling effects.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] CodeGen-16B required much more memory than a single GPU could provide: the 16-bit model parameters alone require about 30 GB, and fine-tuning with optimizer states and intermediate computations requires about 250 GB. [Gap] Direct single-GPU fine-tuning was infeasible for the largest model. [Decision] Use model/data parallelism and optimizer-state sharding strategies similar to DeepSpeed and ZeRO, with ZeRO-3 default hyperparameters.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "ZeRO-3 optimizer-state sharding with DeepSpeed-like model/data parallelism",
+        "version": ""
+      },
+      "parameters": {
+        "CodeGen_2B_training": "1 epoch on two RTX8000 GPUs, completed in 2 days",
+        "CodeGen_6B_training": "1 epoch on four RTX8000 GPUs, completed in 4 days",
+        "CodeGen_16B_training": "1 epoch on three A100 GPUs, completed in 6 days",
+        "MegatronLM_training": "9 epochs on one RTX8000 GPU, completed in 15 hours",
+        "J1_Large_training": "off-the-shelf AI21 Studio fine-tuning",
+        "precision": "16-bit for CodeGen memory estimate"
+      },
+      "observation": "The authors produced five fine-tuned Verilog-specialized LLMs and released training/evaluation scripts and model checkpoints.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Evaluating generated HDL requires more than text similarity because Verilog can compile but be functionally wrong. [Gap] There was no HumanEval-like transparent Verilog benchmark with executable test benches. [Decision] Build a custom evaluation harness with hand-designed prompts, Verilog test benches, compilation, and simulation.",
+      "action": "design",
+      "tool": {
+        "name": "Icarus Verilog compilation/simulation harness",
+        "version": "11.0"
+      },
+      "parameters": {
+        "problem_set_I_size": "17 Verilog challenges",
+        "difficulty_levels": "Basic, Intermediate, Advanced",
+        "prompt_detail_levels": "Low, Medium, High",
+        "sampling_temperatures": "{0.1, 0.3, 0.5, 0.7, 1}",
+        "completions_per_prompt": "{1, 10, 25}",
+        "autocomplete_max_tokens": "300 for MegatronLM, CodeGen, code-davinci-002",
+        "J1_Large_max_tokens": "256",
+        "chat_model_max_tokens": "900 for GPT-3.5-turbo, PALM2, and Claude-style conversational models"
+      },
+      "observation": "Problem Set I covered simple wires, gates, priority encoders, multiplexers, adders, counters, LFSRs, RAM, permutations, truth tables, FSMs, arithmetic shift registers, and ABRO FSM. Basic and some intermediate tests were exhaustive; more complex tests behaved like unit tests to keep evaluation time reasonable.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] With fine-tuned checkpoints and a transparent harness in place, the authors could directly measure whether Verilog fine-tuning improves compilation and functional correctness. [Gap] Raw completion quality depends on temperature, prompt detail, and number of samples, so a fair comparison needed to account for these factors. [Decision] Query each model over prompt, temperature, and completion-count combinations and report the best Pass@(scenario*10) values for n=10 by selecting the temperature that produced the most successful completions for each scenario.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Pass@k evaluation with Icarus Verilog test benches",
+        "version": "11.0"
+      },
+      "parameters": {
+        "metric": "Pass@(scenario*10)",
+        "reported_completion_count": "n = 10",
+        "temperature_selection": "best temperature per model, problem difficulty, and description level",
+        "generated_code_truncation": "truncate completions at keywords end and endmodule"
+      },
+      "observation": "Fine-tuned models compiled far more often than pre-trained models: using best Pass@(scenario*10) values, 11.9% of completions from pre-trained LLMs compiled versus 64.6% from fine-tuned LLMs. Functional correctness improved from 1.09% for pre-tuned LLMs to 27.0% post-tuning. CodeGen-16B-FT was the strongest fine-tuned model on this evaluation, producing functionally correct code 41.9% of the time, compared with 35.4% for code-davinci-002.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] The custom 17-problem benchmark was transparent but small. HDLBits offered a broader distribution of Verilog tasks and an online judge with synthesis and simulation checks. [Gap] The authors needed to test whether the fine-tuned model generalized beyond their hand-designed problems and how it compared with newer large commercial LLMs. [Decision] Evaluate on an expanded HDLBits-derived problem set using the HDLBits upload-and-compile judge, which synthesizes with Quartus and simulates with Modelsim.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "HDLBits online judge with Quartus synthesis and Modelsim simulation",
+        "version": ""
+      },
+      "parameters": {
+        "problem_set_II_size_text": "181 problems reported in Section 4.1",
+        "problem_set_II_size_table": "164 problems reported in Table 3 caption",
+        "judge_statuses": "Success!, Compile Error, Simulation Error, Incorrect",
+        "categories": "GettingStarted, Verilog basics/vectors/modules/procedures/features, combinational circuits, sequential circuits, FSM, cellular automata, larger circuits, Verify Bugs"
+      },
+      "observation": "The fine-tuned CodeGen-16B model showed competitive performance against GPT-3.5-turbo and other large LLMs, excelling in some scenarios. The paper reports that CodeGen-16B-FT outperformed GPT-3.5-turbo by a 1.1% overall increase and showed a 41% improvement in syntactically correct Verilog generation across problem categories compared with its pre-trained counterpart. GPT-4 performed especially well on advanced problems.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Aggregate pass rates showed large gains from fine-tuning, but functional correctness remained far from perfect. [Gap] The authors needed to understand which Verilog tasks remained hard and whether failures were syntactic, semantic, prompt-related, or due to missing hardware-design reasoning. [Decision] Manually inspect representative failed completions and discuss error modes on Set I and Set II tasks.",
+      "action": "analysis",
+      "tool": {
+        "name": "Manual error inspection of generated Verilog completions",
+        "version": ""
+      },
+      "parameters": {
+        "CodeGen_16B_FT_completions_per_Set_I_problem": "540 completions",
+        "inspected_Set_I_failures": "Problem 7 LFSR, Problem 9 Shift and Rotate, Problem 12 Truth table, FSM problems 8/15/17",
+        "inspected_Set_II_failures": "Conway's Game of Life, 8-bit 2-to-1 MUX bug fixing"
+      },
+      "observation": "For CodeGen-16B-FT on Problem Set I, none of the 540 completions passed for Problem 7 LFSR or Problem 12 Truth table, and only one completion passed for Problem 9 Shift and Rotate. On Conway's Game of Life, none of GPT-3.5-turbo, PALM2, or CodeGen-16B-FT achieved full functional correctness. The authors concluded that fine-tuned LLMs are useful for compilable skeleton code but still require designer review and manual correction for edge cases and complex behavior.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The final claims were verified with two executable evaluation harnesses: custom Problem Set I test benches compiled and simulated using Icarus Verilog v11.0, and HDLBits-derived Problem Set II judged through HDLBits upload-and-compile using Quartus synthesis and Modelsim simulation. Performance was measured by compilation rate, functional Pass@k-style rates, and comparison against pre-trained and commercial LLM baselines.",
+    "metrics": {
+      "pretrained_compile_rate": {
+        "value": "11.9",
+        "unit": "%",
+        "interpretation": "Using best Pass@(scenario*10) values, only 11.9% of completions generated by pre-trained LLMs compiled on the custom evaluation."
+      },
+      "finetuned_compile_rate": {
+        "value": "64.6",
+        "unit": "%",
+        "interpretation": "Using best Pass@(scenario*10) values, fine-tuned LLMs produced syntactically compilable Verilog much more often than their pre-trained counterparts."
+      },
+      "pre_tuned_functional_correctness": {
+        "value": "1.09",
+        "unit": "%",
+        "interpretation": "Before Verilog fine-tuning, LLM completions were functionally accurate only rarely."
+      },
+      "post_tuning_functional_correctness": {
+        "value": "27.0",
+        "unit": "%",
+        "interpretation": "After Verilog fine-tuning, the overall functional correctness rate increased substantially."
+      },
+      "CodeGen_16B_FT_functional_correctness": {
+        "value": "41.9",
+        "unit": "%",
+        "interpretation": "The best fine-tuned open model, CodeGen-16B-FT, generated functionally correct code at the highest reported rate among the fine-tuned models in the custom evaluation."
+      },
+      "code_davinci_002_functional_correctness": {
+        "value": "35.4",
+        "unit": "%",
+        "interpretation": "The commercial code-davinci-002 baseline produced functionally correct code less often than CodeGen-16B-FT in the reported comparison."
+      },
+      "CodeGen_16B_FT_vs_GPT_3_5_turbo_overall": {
+        "value": "1.1",
+        "unit": "percentage points",
+        "interpretation": "The abstract reports that the fine-tuned open-source CodeGen-16B model outperformed GPT-3.5-turbo by a 1.1% overall increase."
+      },
+      "syntactic_correctness_improvement_vs_pretrained_counterpart": {
+        "value": "41",
+        "unit": "%",
+        "interpretation": "The abstract reports a 41% improvement in generating syntactically correct Verilog code across problem categories compared with the pre-trained counterpart."
+      }
+    },
+    "final_verdict": "The original goal was partially met. Fine-tuning on the curated Verilog corpus produced a large improvement in compilable and functionally correct Verilog, and CodeGen-16B-FT was competitive with or better than some commercial baselines, including the reported 1.1 percentage-point overall advantage over GPT-3.5-turbo and better functional correctness than code-davinci-002 in the custom benchmark. However, the final functional correctness rate remained far below full automation, with complex tasks such as LFSRs, truth tables, shift/rotate logic, FSM edge cases, and Conway's Game of Life still requiring human correction."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Text extraction from Verilog textbook PDFs produced noisy and malformed training text.",
+      "diagnosis": "PDF OCR/text extraction quality varied by source, causing improper line formatting, unrecognized logical operators, and headers or footers appearing inside extracted passages.",
+      "correction": "The authors cleaned the extracted text by filtering irrelevant passages such as index, preface, and acknowledgments, and used regular expressions to identify prose-plus-Verilog blocks before generating overlapping sliding-window training examples."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Some prompts left reset semantics ambiguous, especially in FSM problems.",
+      "diagnosis": "The problem comments did not always specify whether reset should be synchronous or asynchronous, allowing multiple plausible completions; the exact test-bench implementation could strongly affect pass/fail outcomes.",
+      "correction": "The authors verified active-high reset behavior at the output but noted that they did not test all synchronous/asynchronous and corner-case variants; clearer prompt specification and prompt engineering were identified as important."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "CodeGen-16B-FT produced zero passing completions for Problem 7, the 5-bit Galois LFSR with taps at bit positions 5 and 3.",
+      "diagnosis": "Manual inspection showed that the LLMs generally failed to concatenate the most significant bits with the feedback value.",
+      "correction": "The authors suggested that a better prompt might yield a correct result, pointing to prompt engineering as future work."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "CodeGen-16B-FT produced only one passing completion for Problem 9, Shift and Rotate, out of 540 completions for that problem.",
+      "diagnosis": "The generated completions either failed to cover all shift values or assigned incorrect bit positions.",
+      "correction": "The paper indicates that manual designer correction or improved prompting/training would be needed for reliable functional correctness on this class of bit-manipulation task."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "CodeGen-16B-FT produced zero passing completions for Problem 12, Truth table, out of 540 completions for that problem.",
+      "diagnosis": "The completions were close in structure, using all input values in assign statements, but failed to form the correct Boolean expressions between input bits; the authors interpreted this as suggesting a lack of diversity in the training corpus.",
+      "correction": "The authors identified more diverse or targeted training data as a potential avenue for improvement."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "None of GPT-3.5-turbo, PALM2, or CodeGen-16B-FT generated fully functionally correct code for the Conway's Game of Life HDLBits problem.",
+      "diagnosis": "The inspected implementations had hardware and algorithmic errors: one had a race condition from modifying next_state and current_state simultaneously at each clock edge and updated a wire inside an always block; another used flawed ternary game logic, failed to handle the toroidal grid, and incorrectly counted the cell itself as a neighbor.",
+      "correction": "The authors concluded that complex generated code needs manual adjustment for edge cases and problem-specific behavior, and suggested future work involving targeted fine-tuning, domain-specific knowledge, or hybrid approaches."
+    },
+    {
+      "step_index_ref": 8,
+      "what_failed": "Bug-fixing behavior was inconsistent on an 8-bit 2-to-1 multiplexer task.",
+      "diagnosis": "The error was not localized and required understanding signal widths and the broader code structure. CodeGen-16B-FT fixed the bug, PALM2 made a partial correction but missed the output port width, and GPT-3.5-turbo recognized a width-related issue but did not fix it appropriately.",
+      "correction": "The paper notes that current LLMs struggle with deeper code comprehension and error localization; designer review remains necessary."
+    }
+  ]
+}

@@ -1,0 +1,274 @@
+{
+  "paper_id": "paper:lvlm_ehub_a_comprehensive_evaluation_benchmark_for_large_vis:2023",
+  "title": "LVLM-EHub: A Comprehensive Evaluation Benchmark for Large Vision-Language Models",
+  "year": 2023,
+  "domain": "medicine",
+  "venue": "IEEE Transactions on Pattern Analysis and Machine Intelligence",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_batch/2089_a8d02ff6d075c3cc48f0b97801cc52765c8f9ac9/full.md",
+  "parse_tool": "mineru_pipeline",
+  "01_initial_request": {
+    "target_name": "LVLM-eHub, a comprehensive evaluation hub and online arena for publicly available large vision-language models",
+    "input_data": "Eight representative LVLM checkpoints with parameter sizes under 10B: BLIP2, LLaVA, LLaMA-Adapter V2, MiniGPT-4, mPLUG-Owl, Otter, InstructBLIP, and VPGTrans. Model metadata included visual encoders, LLM backbones, adaptation modules, visual tokens, tuning parameters, and training data scales: BLIP2 used 129M image-text pairs; LLaVA used 595K CC3M image-text samples and 158K LLaVA instruction samples; LLaMA-Adapter V2 used 200M LAION-400M image-text samples and 158K LLaVA instruction samples; MiniGPT-4 used 5M image-text samples and 3.5K CC+ChatGPT instruction samples; mPLUG-Owl used 204M image-text samples and 158K instruction samples; Otter used 158K instruction samples; InstructBLIP used 16M QA instruction samples; VPGTrans used 13.8M image-text samples and 3.5K instruction samples. The benchmark pool contained 47 text-related visual benchmarks grouped into 6 capability categories plus an online crowd-sourced arena.",
+    "user_intent": "Prior LVLM evaluations covered only specific tasks or subsets of models, so the authors wanted a holistic, comparable evaluation that could expose strengths, overfitting, hallucination, and open-world user-level behavior across representative LVLMs.",
+    "quantifiable_goal": "Evaluate 8 LVLMs with less than 10B parameters across 6 multimodal capability categories using 47 standard benchmarks, and provide an online anonymous pairwise arena with Elo-style rankings for open-world image/text chat."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] Recent LVLMs such as BLIP2, LLaVA, MiniGPT-4, mPLUG-Owl, Otter, InstructBLIP, and VPGTrans align visual encoders with LLMs and are increasingly used for multimodal QA and conversation. [Gap] Existing studies evaluated only limited capabilities such as hallucination, visual commonsense, OCR, or fine-grained perception, leaving no unified comparison across representative models. [Decision] Build a model zoo of public LVLMs and restrict the comparison to checkpoints below 10B parameters for fair and accessible evaluation.",
+      "action": "literature_check",
+      "tool": {
+        "name": "LVLM model survey and checkpoint collection",
+        "version": ""
+      },
+      "parameters": {
+        "models": "BLIP2, LLaVA, LLaMA-Adapter V2, MiniGPT-4, mPLUG-Owl, Otter, InstructBLIP, VPGTrans",
+        "parameter_limit": "<10B parameters",
+        "model_count": "8"
+      },
+      "observation": "The authors assembled 8 LVLMs with diverse visual encoders, LLMs, adaptation modules, and training-data scales, including models trained with no visual instruction data, 3.5K instruction samples, 158K instruction samples, and 16M QA samples.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] LVLM behavior spans perception, text extraction, reasoning, commonsense, hallucination, and embodied planning. [Gap] A single task cannot reveal these different failure modes or allow a reliable model ranking. [Decision] Define 6 capability categories and collect 47 standard text-related visual benchmarks with specified evaluation splits.",
+      "action": "design",
+      "tool": {
+        "name": "LVLM-eHub benchmark suite construction",
+        "version": ""
+      },
+      "parameters": {
+        "capability_categories": "visual perception; visual knowledge acquisition; visual reasoning; visual commonsense; object hallucination; embodied intelligence",
+        "benchmark_count": "47",
+        "example_visual_perception_sets": "ImageNet1K 50K validation; CIFAR10 10K test; Pets37 3669 test; Flowers102 6149 test; COCO-OC 10000 validation; COCO-MCI 10000 validation; VCR-OC 10000 validation; VCR-MCI 1000 validation",
+        "example_reasoning_sets": "DocVQA 5349 validation; TextVQA v0.5.1 5000 validation; STVQA 4000 train samples; OCR-VQA 100037 all; OKVQA 5046 validation; GQA 12578 testdev; Visdial 20640 validation QA pairs; SNLI-VE 500 dev"
+      },
+      "observation": "The resulting benchmark hub covered image classification, object counting, multi-class identification, OCR, KIE, image captioning, VQA, knowledge-grounded image description, visual entailment, visual commonsense, POPE hallucination probing, and embodied-AI planning.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] LVLM outputs can be open-ended text, multiple-choice answers, yes/no answers, or plans, and existing metrics are not uniformly applicable. [Gap] A single evaluation interface would either over-constrain open-ended answers or fail to score structured tasks. [Decision] Use four zero-shot evaluation methods: question answering, prefix-based scoring, multi-turn reasoning, and user studies.",
+      "action": "design",
+      "tool": {
+        "name": "Zero-shot prompt-engineering evaluation protocol",
+        "version": ""
+      },
+      "parameters": {
+        "question_answering_prompt_example": "\"what is written in the image?\" for OCR",
+        "prefix_based_score": "select candidate answer with largest image-text prefix likelihood for multiple-choice QA",
+        "multi_turn_reasoning": "LLM generates sub-questions; LVLM answers sub-questions; another LLM evaluates sub-answer quality iteratively",
+        "user_study_controls": "randomly shuffle model output order and anonymize outputs"
+      },
+      "observation": "The authors established task-specific scoring workflows using accuracy, word accuracy, entity-level F1, CIDEr, mean reciprocal rank, precision, recall, F1-score, yes-answer ratio, Elo rating, and human preference judgments depending on task type.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Visual perception is a prerequisite for downstream LVLM reasoning and can be tested by recognizing categories, objects, and object counts. [Gap] It was unknown whether LVLMs could approach supervised vision systems in zero-shot perception. [Decision] Evaluate all 8 LVLMs on image classification, object counting, and multi-class identification using accuracy and normalized average scores.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Zero-shot visual perception evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "datasets": "ImageNet1K, CIFAR10, Pets37, Flowers102, COCO object counting, VCR object counting, COCO multi-class identification, VCR multi-class identification",
+        "metric": "accuracy; normalized average score",
+        "models": "8 LVLMs"
+      },
+      "observation": "InstructBLIP obtained the best normalized average score of 0.928, followed by BLIP2 at 0.858 and mPLUG-Owl at 0.831. Individual zero-shot results remained far below supervised SOTA, for example the best LVLM ImageNet1K accuracy was 26.68% versus 91.10% supervised SOTA, and the best CIFAR10 accuracy was 67.96% versus 99.70% supervised SOTA.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Visual knowledge acquisition requires reading text, extracting structured fields, and generating captions from images. [Gap] It was unclear how much visual encoders, Q-Former modules, and instruction tuning improve these zero-shot capabilities. [Decision] Evaluate OCR, KIE, and image captioning in a VQA-style framework using word accuracy, entity-level F1, and CIDEr.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Zero-shot visual knowledge acquisition evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "OCR_datasets": "IIIT5K, IC13, IC15, Total-Text, CUTE80, SVT, SVTP, COCO-Text, WordArt, CTW, HOST, WOST",
+        "KIE_datasets": "SROIE, FUNSD",
+        "captioning_datasets": "NoCaps, Flickr30K, WHOOPS",
+        "metrics": "word accuracy for OCR; entity-level F1 for KIE; CIDEr for image captioning"
+      },
+      "observation": "InstructBLIP achieved the highest normalized average score of 0.967, BLIP2 scored 0.927, and VPGTrans scored 0.720. KIE performance was extremely weak relative to task-specific supervised systems, with SROIE and FUNSD LVLM scores around 0.01 to 2.16 while supervised SOTA was 97.81 and 89.45 respectively.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] Visual reasoning and commonsense require integrating image evidence, language, and background knowledge. [Gap] Open-ended generated content from instruction-tuned LVLMs may not be captured correctly by simple metrics, and hallucinated content can distort answers. [Decision] Evaluate VQA, knowledge-grounded image description, visual entailment, ImageNetVC, and VCR, using multi-turn reasoning where appropriate.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Zero-shot visual reasoning and visual commonsense evaluation",
+        "version": ""
+      },
+      "parameters": {
+        "reasoning_datasets": "DocVQA, TextVQA, STVQA, OCR-VQA, OKVQA, GQA, Visdial, IconQA, VSR, WHOOPS, ScienceQA IMG, VizWiz, SNLI-VE",
+        "commonsense_datasets": "ImageNetVC, VCR",
+        "metrics": "top-1 accuracy; MRR for Visdial; normalized average score",
+        "multi_turn_reasoning_tasks": "SNLI-VE and VCR"
+      },
+      "observation": "For visual reasoning, InstructBLIP obtained the best normalized average score of 0.908, followed by LLaMA-Adapter V2 at 0.833 and LLaVA at 0.771. For visual commonsense, InstructBLIP scored 0.995 and LLaVA scored 0.791. Instruction-tuned LVLMs surpassed BLIP2 on SNLI-VE, where the final answer was obtained by multi-turn reasoning; InstructBLIP scored 59.00, LLaMA-Adapter V2 58.8, LLaVA 57.80, MiniGPT-4 54.80, mPLUG-Owl 54.50, Otter 52.60, VPGTrans 52.20, while BLIP2 scored 32.00.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] LVLMs can generate objects inconsistent with the image, a failure known as object hallucination. [Gap] Conventional captioning metrics such as CIDEr may not penalize hallucinated objects reliably. [Decision] Probe object hallucination on MSCOCO using the POPE multi-step yes/no QA pipeline with increasingly difficult negative-object sampling strategies.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "POPE object hallucination evaluation pipeline",
+        "version": ""
+      },
+      "parameters": {
+        "datasets": "MSCOCO-Random, MSCOCO-Popular, MSCOCO-Adversarial",
+        "images_per_dataset": "500",
+        "questions_per_image": "6 yes/no questions",
+        "samples_per_dataset": "3000",
+        "metrics": "accuracy, precision, recall, F1-score, ratio of answering Yes"
+      },
+      "observation": "InstructBLIP performed best on the hallucination evaluation, followed by BLIP2; their average accuracy reached more than 80%. Instruction-tuned models except InstructBLIP performed worse than BLIP2 because they tended to answer Yes, indicating a tendency to hallucinate objects that were not present in the target image.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] Embodied intelligence tasks require converting visual observations and natural-language instructions into useful action plans. [Gap] Existing automatic metrics do not reliably judge plan relevance, conciseness, and usefulness. [Decision] Conduct anonymized and shuffled human user studies for embodied-AI planning outputs.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Embodied-AI user study",
+        "version": ""
+      },
+      "parameters": {
+        "participants": "15",
+        "VirtualHome_household_scenarios": "6",
+        "embodied_benchmarks": "Minecraft, VirtualHome, Meta-World, Franka Kitchen",
+        "evaluation_controls": "anonymous model outputs; randomly shuffled output order"
+      },
+      "observation": "The user-study protocol allowed human assessment of generated plans in scenarios where automatic metrics were considered inadequate. The paper reports qualitative examples showing that some LVLM outputs identified task-relevant objects and produced stepwise plans, while others hallucinated scene elements or produced less actionable descriptions.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Quantitative benchmarks are limited and may not represent open-world user interaction. [Gap] A model that scores highly on in-domain benchmarks may generalize poorly in free-form image/text chat. [Decision] Build LVLM Arena for anonymous randomized pairwise battles with human voting and Elo-style ranking.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "LVLM Arena",
+        "version": ""
+      },
+      "parameters": {
+        "components": "matchmaking, chat, voting",
+        "sampling": "random sampling from the model zoo",
+        "vote_options": "Model A, Model B, Tie, Both are bad",
+        "chat_setting": "single-round chats at the time of reporting",
+        "ranking_method": "Elo rating updated from voting results",
+        "reported_snapshots": "June 3 and June 13"
+      },
+      "observation": "Arena rankings changed as more evaluation samples were collected. InstructBLIP performed well on existing in-domain tasks but generalized poorly in the open-world arena, whereas instruction-tuned models with moderate high-quality instruction-following data such as mPLUG-Owl, MiniGPT-4, Otter, and LLaMA-Adapter V2 worked well in the open-world arena.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors verified LVLM-eHub by running zero-shot quantitative evaluations on 47 benchmarks across 6 capability categories for 8 LVLMs, using task-appropriate metrics, and by deploying LVLM Arena for anonymous pairwise human preference evaluation with Elo-style ranking.",
+    "metrics": {
+      "models_evaluated": {
+        "value": "8",
+        "unit": "LVLMs",
+        "interpretation": "The benchmark covered 8 representative public LVLMs with checkpoints below 10B parameters."
+      },
+      "capability_categories": {
+        "value": "6",
+        "unit": "categories",
+        "interpretation": "The suite covered visual perception, visual knowledge acquisition, visual reasoning, visual commonsense, object hallucination, and embodied intelligence."
+      },
+      "standard_benchmarks": {
+        "value": "47",
+        "unit": "benchmarks",
+        "interpretation": "The quantitative component consolidated 47 standard text-related visual benchmarks."
+      },
+      "best_visual_perception_average_score": {
+        "value": "0.928",
+        "unit": "normalized average score",
+        "interpretation": "InstructBLIP ranked highest in the visual perception category."
+      },
+      "best_visual_knowledge_average_score": {
+        "value": "0.967",
+        "unit": "normalized average score",
+        "interpretation": "InstructBLIP ranked highest across OCR, KIE, and captioning evaluations."
+      },
+      "best_visual_reasoning_average_score": {
+        "value": "0.908",
+        "unit": "normalized average score",
+        "interpretation": "InstructBLIP ranked highest across VQA, KGID, and visual entailment tasks."
+      },
+      "best_visual_commonsense_average_score": {
+        "value": "0.995",
+        "unit": "normalized average score",
+        "interpretation": "InstructBLIP ranked highest on ImageNetVC and VCR visual commonsense evaluation."
+      },
+      "POPE_samples_per_split": {
+        "value": "3000",
+        "unit": "yes/no questions",
+        "interpretation": "Each POPE hallucination split used 500 MSCOCO images with 6 questions per image."
+      },
+      "embodied_user_study_participants": {
+        "value": "15",
+        "unit": "participants",
+        "interpretation": "Human evaluators judged embodied-planning outputs where automatic metrics were considered insufficient."
+      },
+      "arena_ranking_snapshots": {
+        "value": "2",
+        "unit": "reported snapshots",
+        "interpretation": "The paper reported LVLM Arena rankings at least for June 3 and June 13, showing that rankings changed as more user votes were collected."
+      }
+    },
+    "final_verdict": "The original goal was met: LVLM-eHub evaluated 8 representative LVLMs across 6 capability categories using 47 benchmarks and added an online open-world arena for human pairwise comparison. The evaluation produced concrete rankings and diagnostic findings, including strong in-domain performance but poor open-world generalization for InstructBLIP, large gaps between LVLMs and supervised SOTA on perception and KIE, and object hallucination in several instruction-tuned models."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 4,
+      "what_failed": "Zero-shot LVLM perception lagged far behind supervised vision systems.",
+      "diagnosis": "Even the best LVLM accuracies on coarse classification tasks were much lower than supervised SOTA, indicating that visual perception was not solved by the LVLM alignment and instruction-tuning pipelines.",
+      "correction": "The authors reported the gap as a key diagnostic result and noted substantial room for improving LVLM perception ability."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Key information extraction performance was extremely poor.",
+      "diagnosis": "LVLMs evaluated in a VQA-style zero-shot setup did not reliably extract structured fields from scanned receipts and forms; their SROIE and FUNSD scores were near zero to about 2.16 compared with supervised SOTA near 97.81 and 89.45.",
+      "correction": "The authors retained KIE as part of the benchmark to expose this limitation rather than claiming the task was solved."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Instruction-tuned LVLMs except InstructBLIP showed object hallucination.",
+      "diagnosis": "These models tended to answer Yes in POPE yes/no object-existence probing, causing them to assert the presence of objects that were absent from the image.",
+      "correction": "The authors evaluated hallucination explicitly with POPE and reported that multi-turn reasoning could alleviate hallucination in related evaluations such as SNLI-VE and VCR."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Conventional captioning metrics such as CIDEr could be ineffective under object hallucination.",
+      "diagnosis": "Generated captions may contain plausible but image-inconsistent objects, and a surface-level captioning score may not reliably penalize those hallucinated entities.",
+      "correction": "The authors added a dedicated object-hallucination evaluation pipeline using POPE yes/no object probes."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "Strong in-domain benchmark performance did not guarantee open-world arena performance.",
+      "diagnosis": "InstructBLIP was fine-tuned on massive in-domain QA data and performed well on many existing tasks, but the authors found that it generalized poorly in the open-world arena.",
+      "correction": "The authors complemented quantitative benchmarks with LVLM Arena, an open-world anonymous human preference evaluation."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "The online arena initially supported only single-round chats.",
+      "diagnosis": "High computational and memory demands prevented multi-round chat support at the time of reporting.",
+      "correction": "The authors identified multi-round support as a future update for the LVLM Arena platform."
+    }
+  ]
+}

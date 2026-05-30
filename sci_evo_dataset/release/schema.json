@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://opendatalab.com/scievo-lineage/schema.json",
+  "title": "SciEvo-Lineage Dataset",
+  "description": "Multi-scale scientific evolution dataset spanning intra-paper closed-loop records, inter-paper transitions, multi-paper lineages, and agentic ReAct episodes.",
+  "type": "object",
+  "properties": {
+    "layer": {
+      "enum": [
+        "paper_atom",
+        "transition",
+        "lineage",
+        "agentic_episode"
+      ]
+    },
+    "id": {
+      "type": "string"
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "layer",
+    "id",
+    "data"
+  ],
+  "$defs": {
+    "closed_loop_record": {
+      "type": "object",
+      "required": [
+        "01_initial_request",
+        "02_agent_trajectory",
+        "03_success_verification"
+      ],
+      "properties": {
+        "01_initial_request": {
+          "type": "object",
+          "required": [
+            "target_name",
+            "input_data",
+            "user_intent",
+            "quantifiable_goal"
+          ]
+        },
+        "02_agent_trajectory": {
+          "type": "array",
+          "minItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "step_index",
+              "thought",
+              "action",
+              "tool",
+              "parameters",
+              "observation",
+              "valid"
+            ],
+            "properties": {
+              "action": {
+                "enum": [
+                  "dry_experiment",
+                  "wet_experiment",
+                  "analysis",
+                  "literature_check",
+                  "design",
+                  "reflection"
+                ]
+              }
+            }
+          }
+        },
+        "03_success_verification": {
+          "type": "object",
+          "required": [
+            "validation_technique",
+            "metrics",
+            "final_verdict"
+          ]
+        },
+        "04_failure_modes": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,359 @@
+{
+  "paper_id": "paper:ground_state_energy_functional_with_hartree_fock_efficiency:2020",
+  "title": "Ground State Energy Functional with Hartree-Fock Efficiency and Chemical Accuracy.",
+  "year": 2020,
+  "domain": "chemistry",
+  "venue": "Journal of Physical Chemistry A",
+  "source_paper_full_md": "/home/azureuser/workspace-yqh/yqh/download/papers_parsed_docling/18208_0a205e88690b934ec937ed6530702050b6598454/full.md",
+  "parse_tool": "docling",
+  "01_initial_request": {
+    "target_name": "Deep Post-Hartree-Fock (DeePHF), a machine-learning ground-state energy functional predicting the post-HF correlation energy E_c = E_CCSD(T) - E_HF from HF ground-state orbitals or density matrices",
+    "input_data": "Hartree-Fock or Kohn-Sham orbitals computed from molecular geometries using PySCF with the cc-pVTZ basis; CCSD(T) correlation-energy labels from public MOB-ML datasets including 1000 water geometries, short alkanes with 100 methane, 1000 ethane, 1001 propane, 101 n-butane, and 101 isobutane geometries, QM7b-T, and MP2-labeled GDB-13-T; ANI-1ccx with about 500k C/H/N/O molecular configurations labeled by CCSD(T)*/CBS; atom-centered projection bases with l in {0,1,2}, normally 12 radial functions giving 108 basis functions per atom, and 9 radial functions giving 81 basis functions per atom for short alkanes",
+    "user_intent": "The authors wanted to overcome the trade-off in electronic-structure calculations: HF and DFT are efficient but often insufficiently accurate, while post-HF methods such as CCSD(T) are accurate but too expensive for larger molecules. They also aimed to improve transferability relative to atom-based ML energy models by using electronic-orbital information rather than only nuclear coordinates and atom types.",
+    "quantifiable_goal": "Achieve chemical accuracy, defined as prediction error below 1 kcal/mol, while keeping the added computational cost less than a reference HF or DFT calculation and scaling linearly with system size."
+  },
+  "02_agent_trajectory": [
+    {
+      "step_index": 1,
+      "thought": "[Background] HF and DFT provide efficient ground-state energies but lack post-HF accuracy, whereas CCSD(T) is accurate but computationally expensive. MOB-ML had shown that molecular-orbital-based features can improve transferability using HF orbital information. [Gap] A transferable, symmetry-preserving, local, efficient functional of electronic structure data was still needed, preferably without localized-orbital gauge choices or per-orbital-pair labels. [Decision] Formulate DeePHF as a model of the CCSD(T)-HF energy difference E_c using HF orbitals or the corresponding density matrix as input.",
+      "action": "design",
+      "tool": {
+        "name": "DeePHF problem formulation",
+        "version": ""
+      },
+      "parameters": {
+        "target_energy": "E_c = E_CCSD(T) - E_HF",
+        "desired_accuracy": "<1 kcal/mol",
+        "reference_high_accuracy_method": "CCSD(T)",
+        "low_cost_starting_method": "Hartree-Fock"
+      },
+      "observation": "The authors defined the target as a correlation-energy functional of the HF ground-state orbitals and listed five design requirements: universality, locality, symmetry, accuracy, and efficiency.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 2,
+      "thought": "[Background] The one-particle density matrix is invariant under occupied-orbital unitary gauge transformations and uniquely determines the ground-state energy in density-matrix functional theory. [Gap] Raw orbitals or density matrices are not directly usable as compact, rotation-invariant, local ML descriptors. [Decision] Project occupied HF orbitals onto atom-centered radial-times-spherical-harmonic bases, form local density matrices per atom, and use their eigenvalues as rotation- and gauge-invariant descriptors.",
+      "action": "design",
+      "tool": {
+        "name": "Local density-matrix eigenvalue descriptor",
+        "version": ""
+      },
+      "parameters": {
+        "basis_form": "alpha_I,nlm(r) = R_n(r) Y_lm(theta, phi)",
+        "angular_indices": "l = {0, 1, 2}",
+        "m_components": "1, 3, and 5 for l=0,1,2",
+        "default_radial_functions": "12",
+        "default_basis_functions_per_atom": "108",
+        "short_alkane_radial_functions": "9",
+        "short_alkane_basis_functions_per_atom": "81"
+      },
+      "observation": "The descriptor d_I was constructed from eigenvalues of local density matrices D^I_nl. By construction, the model preserved translation, rotation, same-species permutation, and occupied-orbital gauge symmetries, and each atomic contribution depended locally on projected orbital coefficients.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 3,
+      "thought": "[Background] Simple systems may be well described by low-capacity regressors, but larger chemical datasets require more expressive models. [Gap] The functional F mapping descriptors to atomic correlation-energy contributions needed practical fitting choices and potentially more information than the bare local density matrix. [Decision] Implement both linear regression and a feed-forward neural network, and introduce extended descriptors using kernel functions of HF orbital energies.",
+      "action": "design",
+      "tool": {
+        "name": "OLS/Ridge regression and feed-forward neural network with extended descriptors",
+        "version": ""
+      },
+      "parameters": {
+        "linear_training": "ordinary least squares; Ridge when training samples are too few",
+        "neural_network_hidden_layers": "3",
+        "neurons_per_hidden_layer": "100",
+        "skip_connections": "between layers",
+        "activation": "GELU except final layer",
+        "optimizer": "Adam",
+        "adam_beta1": "0.9",
+        "adam_beta2": "0.999",
+        "adam_epsilon": "1e-8",
+        "loss": "L2",
+        "batch_size": "16",
+        "initial_learning_rate": "1e-4",
+        "learning_rate_decay": "factor 0.98 every 500 epochs",
+        "regularization": "none for neural network",
+        "extended_descriptor_kernels": "f0(epsilon)=1, f1(epsilon)=epsilon, f2(epsilon)=exp(epsilon)"
+      },
+      "observation": "The authors established four model scenarios for larger tests: basic versus extended descriptors crossed with linear versus neural-network fitting functions. They noted that neural networks can overfit when the number of training samples is very small.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 4,
+      "thought": "[Background] Single water molecules are a simple benchmark where a local electronic descriptor should be sufficient. [Gap] The sample efficiency of the basic DeePHF descriptor and linear model needed to be quantified. [Decision] Train linear DeePHF models on random subsets of the 1000-water dataset and evaluate remaining geometries along a learning curve.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "PySCF Hartree-Fock plus DeePHF linear regression",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "1000 single-water geometries",
+        "basis_for_HF": "cc-pVTZ",
+        "descriptor": "basic local density-matrix eigenvalues",
+        "fitting_function": "linear regression",
+        "random_repeats": "1000",
+        "ridge_alpha_when_training_samples_below_108": "1e-9"
+      },
+      "observation": "With only 10 training samples, DeePHF predicted all remaining water testing geometries with errors below 1 mH. Increasing training size further reduced mean absolute error, while maximum absolute error had larger variance due to a few hard testing points.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 5,
+      "thought": "[Background] Short alkanes had been used previously to test transferability of orbital-based ML energy models. [Gap] Training only on ethane and propane might or might not generalize to larger alkane isomers. [Decision] Follow the MOB-ML protocol: train on 50 ethane and 20 propane geometries, then test on n-butane and isobutane over many random training selections.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "DeePHF linear regression on short alkanes",
+        "version": ""
+      },
+      "parameters": {
+        "training_set": "50 ethane geometries + 20 propane geometries",
+        "test_set": "101 n-butane geometries + 101 isobutane geometries",
+        "available_dataset_counts": "100 methane, 1000 ethane, 1001 propane, 101 n-butane, 101 isobutane",
+        "descriptor": "basic local density-matrix eigenvalues",
+        "basis_functions_per_atom": "81",
+        "regression": "OLS with normalized descriptors",
+        "ridge_alpha": "1e-7",
+        "random_repeats": "10000",
+        "reported_metrics": "ME, MAE, MaxAE, and MARE after molecule-type global shift"
+      },
+      "observation": "After applying a molecule-type global shift, DeePHF achieved MARE peak values of 0.18 mH for n-butane and 0.21 mH for isobutane, and best values of 0.09 mH and 0.11 mH, respectively, outperforming the reported MOB-ML and NeuralXC shifted-error values. However, unshifted predictions showed large variance and systematic bias depending on the random training subset.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 6,
+      "thought": "[Background] The short-alkane tests showed good shifted errors but unstable unshifted transfer, especially for isobutane. [Gap] The origin of the bias and variance needed diagnosis. [Decision] Analyze the atomic descriptor space using principal component analysis and compare atom-environment clusters across methane, ethane, propane, n-butane, and isobutane.",
+      "action": "analysis",
+      "tool": {
+        "name": "Principal component analysis of DeePHF descriptors",
+        "version": ""
+      },
+      "parameters": {
+        "input_points": "single-atom DeePHF descriptors from small alkane molecules",
+        "projection_dimension": "2",
+        "cluster_labels": "element type and neighboring environment, e.g. carbon (C1,H3), (C2,H2), (C3,H1)"
+      },
+      "observation": "Hydrogen atoms and carbon atoms with different neighbor environments formed distinct clusters. n-Butane atoms lay in clusters covered by ethane and propane, whereas isobutane contained a carbon environment connected to three carbons, (C3,H1), absent from training. Methane carbon formed another separate cluster; adding methane data reduced test accuracy by introducing bias when training data were limited.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 7,
+      "thought": "[Background] Simple linear models were adequate for water and gave useful but fragile alkane transfer results. [Gap] A more realistic chemically diverse dataset required testing descriptor expressivity and nonlinear fitting. [Decision] Evaluate four DeePHF variants on QM7b-T: basic versus extended descriptors and linear versus neural-network fitting functions.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "DeePHF learning curves on QM7b-T",
+        "version": ""
+      },
+      "parameters": {
+        "dataset": "QM7b-T",
+        "labels": "CCSD(T) correlation energies",
+        "HF_engine": "PySCF",
+        "HF_basis": "cc-pVTZ",
+        "model_scenarios": "basic-linear, extended-linear, basic-neural-network, extended-neural-network",
+        "extended_descriptor_size": "3 times basic descriptor using f0=1, f1=epsilon, f2=exp(epsilon)",
+        "training_sizes_discussed": "1000, 3000, 5000, 7000 samples"
+      },
+      "observation": "Linear-model performance saturated as training data increased, whereas neural-network models followed the expected power-law improvement. The neural network with extended descriptors performed best. With 1000 samples its mean absolute error was reported as 0.64 and still had many large individual errors; with 5000 samples results were very close to chemical accuracy; with 7000 samples all testing results lay within the 1 kcal/mol chemical-accuracy region.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 8,
+      "thought": "[Background] CCSD(T) labels are expensive, so reducing the number of labeled molecules is important. [Gap] Random selection may waste labels on redundant configurations and leave high-error regions underrepresented. [Decision] Use an active-learning loop in which independently initialized neural networks estimate uncertainty by prediction standard deviation, then select molecules with the largest model deviation for labeling.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Model-deviation active learning with DeePHF neural networks",
+        "version": ""
+      },
+      "parameters": {
+        "initial_training_samples": "1000",
+        "ensemble_size": "4 independently trained neural networks",
+        "acquisition_batch_size": "200 molecules",
+        "rounds": "20",
+        "final_training_samples": "5000",
+        "selection_rule": "largest standard deviation of ensemble predictions",
+        "model": "neural network with extended descriptor",
+        "metric_for_active_learning": "Max 100 MAE over the entire dataset"
+      },
+      "observation": "Active learning substantially reduced error across the learning curve compared with random sampling, reduced the number of training samples required to reach chemical accuracy, and reduced both maximum absolute error and the number of points outside the chemical-accuracy region.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 9,
+      "thought": "[Background] Good performance on held-out QM7b-T molecules does not prove transfer to larger molecules outside the training distribution. [Gap] The model's extrapolation from QM7b-T to GDB-13-T needed direct testing. [Decision] Train DeePHF on randomly sampled QM7b-T data and evaluate on GDB-13-T using MP2 correlation-energy labels, because CCSD(T) labels were unavailable for GDB-13-T.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "QM7b-T to GDB-13-T transfer benchmark",
+        "version": ""
+      },
+      "parameters": {
+        "training_dataset": "QM7b-T",
+        "testing_dataset": "GDB-13-T",
+        "labels": "MP2 correlation energies",
+        "fitting_function": "neural network",
+        "descriptors_tested": "basic and extended",
+        "active_learning": "not used"
+      },
+      "observation": "With sufficiently large QM7b-T training sets, extended-descriptor DeePHF was comparable to or better than MOB-ML RC/GPR/RFC, but in all cases the GDB-13-T errors were larger than chemical accuracy. The learning curve showed anomalous zig-zag behavior, and the whole GDB-13-T set had a large constant shift of about 1.5 mH, indicating extrapolation and insufficient QM7b-T coverage for larger molecules.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 10,
+      "thought": "[Background] DeePHF was formulated using HF orbitals, but the authors argued the scheme should also apply to other self-consistent references. [Gap] It remained to test whether using DFT orbitals and energies instead of HF would preserve performance. [Decision] Use Kohn-Sham DFT with the PBE functional as the starting point and train DeePHF to predict E_CCSD(T) - E_KS on QM7b-T.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "DeePHF with PBE Kohn-Sham DFT starting point",
+        "version": ""
+      },
+      "parameters": {
+        "starting_method": "Kohn-Sham DFT",
+        "exchange_correlation_functional": "PBE",
+        "dataset": "QM7b-T",
+        "target": "E_CCSD(T) - E_KS",
+        "model_scenarios": "basic or extended descriptors with linear or neural-network fitting functions"
+      },
+      "observation": "Linear fitting with PBE starting data was not as good, but neural-network results were comparable to and even slightly better than the corresponding HF-based DeePHF model.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 11,
+      "thought": "[Background] The eigenvalue construction was intended to retain more information from the local density matrix than simpler rotational invariants. [Gap] It was unclear whether a trace over angular indices would be sufficient on large datasets. [Decision] Replace eigenvalue descriptors with trace descriptors and compare learning curves on QM7b-T.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "Trace-descriptor ablation",
+        "version": ""
+      },
+      "parameters": {
+        "descriptor_ablation": "Tr[(D^I_nl)_{mm'}] = sum_m (D^I_nl)_{mm}",
+        "comparison_descriptor": "local density-matrix eigenvalues",
+        "dataset": "QM7b-T",
+        "fitting_function": "neural network"
+      },
+      "observation": "Trace descriptors performed much worse than eigenvalue descriptors. Their testing error saturated when training samples exceeded about 3000, indicating limited expressive power relative to the eigenvalue construction.",
+      "valid": true,
+      "references": []
+    },
+    {
+      "step_index": 12,
+      "thought": "[Background] Training on QM7b-T was insufficient for robust extrapolation to GDB-13-T, suggesting a need for a larger and more diverse training set. [Gap] The method needed evaluation on broad C/H/N/O chemical coverage and independent reaction-energy benchmarks. [Decision] Train DeePHF on the ANI-1ccx dataset and test hydrocarbon reaction and isomerization energies on HC7/11 and ISOL6.",
+      "action": "dry_experiment",
+      "tool": {
+        "name": "DeePHF on ANI-1ccx with HC7/11 and ISOL6 benchmarks",
+        "version": ""
+      },
+      "parameters": {
+        "training_dataset": "ANI-1ccx",
+        "training_size": "about 500k configurations",
+        "elements": "C, H, N, O",
+        "labels": "CCSD(T)*/CBS",
+        "model": "neural network with basic descriptors",
+        "benchmarks": "HC7/11 hydrocarbon reactions and ISOL6 isomerizations"
+      },
+      "observation": "DeePHF achieved mean absolute errors of 1.1 mH on HC7/11 and 1.4 mH on ISOL6 relative to best-estimate references, within chemical accuracy and better than ANI-1ccx on these two reported metrics.",
+      "valid": true,
+      "references": []
+    }
+  ],
+  "03_success_verification": {
+    "validation_technique": "The authors validated DeePHF by computing HF or DFT orbitals from benchmark molecular geometries, predicting correlation-energy corrections, and comparing against CCSD(T), MP2, or CCSD(T)*/CBS labels on disjoint test sets. They used water and short-alkane learning curves, QM7b-T held-out tests, active-learning comparisons, QM7b-T to GDB-13-T transfer tests, PBE-starting-point tests, descriptor ablations, and ANI-1ccx-trained HC7/11 and ISOL6 reaction/isomerization-energy benchmarks.",
+    "metrics": {
+      "chemical_accuracy_threshold": {
+        "value": "1",
+        "unit": "kcal/mol",
+        "interpretation": "Target maximum scale for useful molecular energy prediction accuracy."
+      },
+      "water_error_with_10_training_samples": {
+        "value": "<1",
+        "unit": "mH",
+        "interpretation": "All remaining water test geometries were predicted with errors below 1 mH using only 10 training samples."
+      },
+      "n_butane_MARE_peak_after_global_shift": {
+        "value": "0.18",
+        "unit": "mH",
+        "interpretation": "Most probable shifted mean absolute relative error for n-butane in the short-alkane transfer protocol."
+      },
+      "isobutane_MARE_peak_after_global_shift": {
+        "value": "0.21",
+        "unit": "mH",
+        "interpretation": "Most probable shifted mean absolute relative error for isobutane in the short-alkane transfer protocol."
+      },
+      "n_butane_MARE_best_after_global_shift": {
+        "value": "0.09",
+        "unit": "mH",
+        "interpretation": "Best shifted mean absolute relative error observed for n-butane over random short-alkane training selections."
+      },
+      "isobutane_MARE_best_after_global_shift": {
+        "value": "0.11",
+        "unit": "mH",
+        "interpretation": "Best shifted mean absolute relative error observed for isobutane over random short-alkane training selections."
+      },
+      "QM7b_T_MAE_with_1000_training_samples": {
+        "value": "0.64",
+        "unit": "not explicitly stated in text",
+        "interpretation": "Reported mean absolute error for the extended-descriptor neural-network DeePHF model with 1000 QM7b-T training samples; the authors noted that many individual points still had large errors."
+      },
+      "QM7b_T_training_size_all_tests_within_chemical_accuracy": {
+        "value": "7000",
+        "unit": "training samples",
+        "interpretation": "At this training-set size, all remaining QM7b-T testing results lay within the 1 kcal/mol chemical-accuracy region."
+      },
+      "ANI_1ccx_HC7_11_MAE": {
+        "value": "1.1",
+        "unit": "mH",
+        "interpretation": "Mean absolute error of DeePHF reaction energies on the HC7/11 benchmark relative to best-estimate references."
+      },
+      "ANI_1ccx_ISOL6_MAE": {
+        "value": "1.4",
+        "unit": "mH",
+        "interpretation": "Mean absolute error of DeePHF isomerization energies on the ISOL6 benchmark relative to best-estimate references."
+      }
+    },
+    "final_verdict": "The original goal was substantially met for in-distribution and sufficiently covered organic molecular benchmarks: DeePHF reached chemical accuracy on water, shifted short-alkane tests, QM7b-T with enough training data, and ANI-1ccx-based HC7/11 and ISOL6 reaction benchmarks, while maintaining a post-processing cost designed to be below HF/DFT and linear in system size. The goal was not universally met under extrapolation: QM7b-T-trained models did not reach chemical accuracy on GDB-13-T, and short-alkane transfer showed systematic bias for unseen atomic environments."
+  },
+  "04_failure_modes": [
+    {
+      "step_index_ref": 3,
+      "what_failed": "Neural-network fitting was not reliable when the number of training samples was very small.",
+      "diagnosis": "The paper attributes this to overfitting caused by using an expressive neural network with insufficient data.",
+      "correction": "Use linear regression for small and simple systems; use neural networks only when training samples are sufficiently numerous."
+    },
+    {
+      "step_index_ref": 5,
+      "what_failed": "Short-alkane transfer showed high variance and systematic unshifted energy bias, especially for isobutane.",
+      "diagnosis": "Isobutane contains a carbon atom bonded to three carbons, an atomic environment absent from the ethane/propane training set, making prediction extrapolative rather than interpolative.",
+      "correction": "The authors diagnosed the issue with descriptor-space PCA and argued that training data must cover the relevant local electronic environments; global shifts reduce the reported relative error but are not practical because they require test-set information."
+    },
+    {
+      "step_index_ref": 6,
+      "what_failed": "Adding methane data reduced test accuracy for the short-alkane protocol.",
+      "diagnosis": "Methane carbon atoms form a descriptor cluster away from both the ethane/propane training environments and the n-butane/isobutane test environments; with very limited and molecule-specific training data, these samples introduced bias, especially for a linear model.",
+      "correction": "Do not assume that more data improves transfer unless it represents the relevant local environments; use descriptor-space coverage analysis to guide training selection."
+    },
+    {
+      "step_index_ref": 7,
+      "what_failed": "Linear DeePHF models saturated on QM7b-T and did not improve adequately with additional data.",
+      "diagnosis": "The chemically diverse QM7b-T dataset required a more expressive functional form than linear regression could provide.",
+      "correction": "Use neural-network fitting functions and extended descriptors based on multiple orbital-energy kernels."
+    },
+    {
+      "step_index_ref": 9,
+      "what_failed": "QM7b-T-trained DeePHF did not achieve chemical accuracy on GDB-13-T.",
+      "diagnosis": "The test errors were larger than chemical accuracy, showed anomalous zig-zag dependence on training selection, and had an approximately 1.5 mH constant shift, indicating extrapolation and insufficient coverage of larger-molecule environments by QM7b-T.",
+      "correction": "Use a larger and more diverse training set, motivating the ANI-1ccx experiments."
+    },
+    {
+      "step_index_ref": 11,
+      "what_failed": "Trace-based rotational descriptors performed much worse than eigenvalue descriptors and saturated after about 3000 training samples.",
+      "diagnosis": "Summing over angular indices discarded too much information from the local density matrix, limiting expressive power.",
+      "correction": "Retain the eigenvalue construction for DeePHF descriptors."
+    }
+  ]
+}

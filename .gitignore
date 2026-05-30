@@ -1,0 +1,29 @@
+# SciEvo-Lineage — exclude heavy data dirs (migrated to /data/zyf/sci_evo_dataset/)
+sci_evo_dataset/paper_atoms/
+sci_evo_dataset/transitions/
+sci_evo_dataset/lineages/
+sci_evo_dataset/agentic_episodes/
+sci_evo_dataset/_pool/
+sci_evo_dataset/_logs/
+sci_evo_dataset/_state/
+sci_evo_dataset/_checkpoints/
+
+# release/: keep samples + schema + data_card + gzipped data, exclude uncompressed bulk JSONL
+sci_evo_dataset/release/full_dataset.jsonl
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+
+# macOS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Backups
+*.bak
+*.orig
+*.tmp
