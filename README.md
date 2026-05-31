@@ -28,6 +28,7 @@ idea-data/
 ├── README.md                         # 参赛提交入口和数据集简介
 ├── Sci-Evo-Sample.pdf                # 官方 Sci-Evo 参考样例
 ├── Sci-Evo_tool_case.json            # 官方 Sci-Evo schema 参考样例
+├── materials/                        # PPT、视频和讲解稿
 └── sci_evo_dataset/
     ├── README.md                     # 数据集使用说明
     ├── SCHEMA.md                     # 字段定义和标注规范
@@ -102,6 +103,7 @@ with gzip.open("sci_evo_dataset/release/data/full_dataset.jsonl.gz", "rt", encod
 | MinerU 使用方式 | `sci_evo_dataset/release/OVERVIEW.md`, `sci_evo_dataset/tech_report/REPORT.md` |
 | 合规、安全、伦理说明 | `sci_evo_dataset/release/OVERVIEW.md` |
 | 数据卡片和质量统计 | `sci_evo_dataset/release/DATA_CARD.md`, `sci_evo_dataset/release/audit_stats.json` |
+| PPT 和视频介绍 | `materials/SciEvo-Lineage_Submission.pptx`, `materials/SciEvo-Lineage_Overview.mp4` |
 
 ## 许可证
 
