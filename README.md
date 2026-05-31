@@ -103,7 +103,7 @@ with gzip.open("sci_evo_dataset/release/data/full_dataset.jsonl.gz", "rt", encod
 | MinerU 使用方式 | `sci_evo_dataset/release/OVERVIEW.md`, `sci_evo_dataset/tech_report/REPORT.md` |
 | 合规、安全、伦理说明 | `sci_evo_dataset/release/OVERVIEW.md` |
 | 数据卡片和质量统计 | `sci_evo_dataset/release/DATA_CARD.md`, `sci_evo_dataset/release/audit_stats.json` |
-| PPT 和视频介绍 | `materials/SciEvo-Lineage_Submission.pptx`, `materials/SciEvo-Lineage_Overview.mp4` |
+| PDF 版 PPT 和视频介绍 | `materials/SciEvo-Lineage_Submission.pdf`, `materials/SciEvo-Lineage_Overview.mp4` |
 
 ## 许可证
 
