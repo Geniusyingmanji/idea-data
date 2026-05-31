@@ -17,6 +17,7 @@ SciEvo-Lineage 数据集发布说明。
 | 数据集文件（gzipped） | `release/data/`（全量 + 4 层独立文件） |
 | 合规、安全、伦理说明 | §3 |
 | 数据样例（38 条） | `release/samples/` |
+| 原始来源样例（10 条） | `raw_samples/source_metadata_samples.json` |
 | Schema 形式化定义 | `release/schema.json` |
 | 数据卡片 | `release/DATA_CARD.md` |
 | 审计统计 | `release/audit_stats.json` |
@@ -44,6 +45,8 @@ SciEvo-Lineage 数据集发布说明。
 原始论文通过 Semantic Scholar Graph API 和 arXiv 公开接口获取，仅包含开放获取（open-access）论文或公开摘要。没有访问付费墙后内容，没有使用未授权数据库。PDF 解析仅针对开放获取的 PDF（MinerU 工具链和 Docling）。
 
 数据集 release 的是从公开论文派生出的结构化表示（闭环记录、gene diff、lineage 轨迹、agentic episode），属于本贡献者新增的智识产品。原始论文层面的版权归原作者及出版方所有。
+
+为了便于审查原始来源格式，仓库提供 10 条公开论文元数据/摘要样例：`raw_samples/source_metadata_samples.json`。样例只包含公开标识符、链接、摘要摘录和解析来源，不重新分发原始 PDF。
 
 ### 安全性
 

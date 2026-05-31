@@ -1,8 +1,6 @@
 # SciEvo-Lineage 技术报告
 
 > 科学演化数据集（Sci-Evo 风格）的设计与构建说明。
->
-> *Living document — fields tagged `<auto>` are filled by `06_audit_and_pack.py` at packaging time.*
 
 ## 1. 数据集简介
 
@@ -10,12 +8,12 @@
 
 | 层 | 单元 | 数量 | 角色 |
 |---|---|---:|---|
-| L1 — PaperAtom | 单篇论文的"科研闭环"记录 | 512 | 严格对齐 Sci-Evo 官方 schema |
-| L2 — TransitionAtom | A→B 两篇论文之间的"决策叙事" | 203 | 在 IdeaEvolving gene_diff 上加 gap/hypothesis/decision/validation |
-| L3 — LineageTrajectory | 一条演化链（3-12 篇论文）的"领域闭环" | 199 | 高层 chain_initial_request → chain_trajectory → chain_verdict |
-| L4 — AgenticEpisode | AI Scientist 在 L3 链上演练的 ReAct 轨迹 | 12 | 直接给 idea_train 做 SFT/DPO 用 |
+| L1 — PaperAtom | 单篇论文的"科研闭环"记录 | 6,010 | 严格对齐 Sci-Evo 官方 schema，并补充 failure modes |
+| L2 — TransitionAtom | A→B 两篇论文之间的"决策叙事" | 3,057 | 在 IdeaEvolving gene_diff 上加 gap/hypothesis/decision/validation |
+| L3 — LineageTrajectory | 一条演化链（4-15 篇论文）的"领域闭环" | 1,515 | 高层 chain_initial_request → chain_trajectory → chain_verdict |
+| L4 — AgenticEpisode | AI Scientist 在 L3 链上演练的 ReAct 轨迹 | 2,468 | 直接给 idea_train 做 SFT/DPO 用 |
 
-每条 L1 单元都遵循 Sci-Evo 官方样例（`Sci-Evo_tool_case.json`）的三段式结构 `01_initial_request / 02_agent_trajectory / 03_success_verification`，并额外补充 `04_failure_modes` —— 这正是评分维度"调包含多步决策与推理链的动态过程"和"允许失败与修正"的直接要求。
+每条 L1 单元都遵循 Sci-Evo 官方样例（`Sci-Evo_tool_case.json`）的三段式结构 `01_initial_request / 02_agent_trajectory / 03_success_verification`，并额外补充 `04_failure_modes` —— 这正是评分维度强调"包含多步决策与推理链的动态过程"和"允许失败与修正"的直接要求。
 
 ## 2. 数据集设计方案
 
@@ -41,7 +39,7 @@
 
 ## 3. 数据集结构说明
 
-完整 schema 见仓库根 `SCHEMA.md` 与 `release/schema.json`。下面给出每层最小字段集：
+完整 schema 见 `sci_evo_dataset/SCHEMA.md` 与 `sci_evo_dataset/release/schema.json`。下面给出每层最小字段集：
 
 ### 3.1 L1 PaperAtom（核心）
 
@@ -108,9 +106,11 @@
 
 ## 4. 数据样例
 
-15 条手工挑选的 L1 范例位于 `release/samples/sample_*.json`，跨域分布；每条都通过 schema validation 且 trajectory ≥ 4 步。
+38 条手工挑选的完整 L1 范例位于 `release/samples/sample_*.json`，跨域分布；每条都包含 `01_initial_request` / `02_agent_trajectory` / `03_success_verification` / `04_failure_modes`，并通过 schema validation 且 trajectory >= 4 步。
 
-完整数据集：`release/full_dataset.jsonl`，每行一条 `{layer, id, data}` envelope。
+原始来源样例位于 `raw_samples/source_metadata_samples.json`，包含 10 条公开论文元数据/摘要样例，保留 Semantic Scholar ID、arXiv/DOI 链接、摘要摘录、学科和解析工具来源。
+
+完整数据集：`release/data/full_dataset.jsonl.gz`，每行一条 `{layer, id, data}` envelope。
 
 ## 5. 构建方案（含 MinerU 工具链使用）
 
@@ -135,10 +135,11 @@ Stage 8  审计 + 打包 + 报告
 1. **MinerU Cloud API**（`https://mineru.net/api/v4/file-urls/batch`）—— 处理新增的 bio/chem/materials 论文 PDF。Token 通过 OpenXLab 注册账户获取。脚本：`scripts/07_fetch_and_mineru.py`。
 2. **MinerU 离线模型 `MinerU2.5-Pro-2604-1.2B`** —— 作为自托管复现路径，部署在本地 GPU 上，支持完全离线复现（`/home/azureuser/workspace-yqh/yqh/models/MinerU2.5-Pro-2604-1.2B`）。
 
-依据来源统计：
-- `mineru_cloud`: 23 篇
-- `mineru_pipeline`: 179 篇
-- `docling` (作为兜底对比工具): 178 篇
+依据 L1 `source.parse_tool` 统计：
+- `mineru_cloud`: 145 篇
+- `mineru_pipeline`: 1,096 篇
+- `docling`（作为兜底 PDF/Markdown 解析器）: 3,011 篇
+- `none`（仅公开摘要/元数据抽取）: 1,758 篇
 
 > 所有 L1 PaperAtom 的 `source.parse_tool` 字段明确标注解析工具，便于复现实验时审计。
 
@@ -146,7 +147,7 @@ Stage 8  审计 + 打包 + 报告
 
 - **Schema validation**：`scripts/06_audit_and_pack.py` 中 `validate_closed_loop()` 实现 6 类硬约束（trajectory ≥4 步、action 在合法集合内、metrics dict 非空等）。失败样本写入 `_logs/layer1_invalid/`。
 - **去重**：按 `paper_id` / `edge_id` / `trace_id` 去重，保留最新。
-- **跨模型抽查**：从每个 domain 随机抽 5 条 L1 通过 GPT-5.4（或 Claude）做 hallucination 校验。
+- **抽样质检**：`scripts/qc_sample.py` 从 release 数据中按 domain 和 parse_tool 抽样，检查来源字段、trajectory 步数、failure modes、metrics 和 final verdict 是否完整。
 - **可追溯**：每条记录带 `construction.extractor_model + ts`，PDF 解析来源带 `source.parse_tool + parse_mapping`。
 
 ## 6. 数据使用方式
@@ -154,8 +155,10 @@ Stage 8  审计 + 打包 + 报告
 ### 6.1 直接训练 LLM 的科研闭环能力
 
 ```python
+import gzip
 import json
-for line in open("full_dataset.jsonl"):
+
+for line in gzip.open("release/data/full_dataset.jsonl.gz", "rt", encoding="utf-8"):
     rec = json.loads(line)
     if rec["layer"] == "paper_atom":
         cl = rec["data"]["closed_loop_record"]
@@ -168,14 +171,17 @@ for line in open("full_dataset.jsonl"):
 ### 6.2 训练科研 Agent（ReAct / Tool-Use）
 
 ```python
-for line in open("agentic_episodes.jsonl"):
+import gzip
+import json
+
+for line in gzip.open("release/data/layer_agentic_episode.jsonl.gz", "rt", encoding="utf-8"):
     rec = json.loads(line)
     # rec["trajectory"] is already in ReAct format compatible with idea_train SFT loader
 ```
 
 ### 6.3 评测：科学演化推理 (Sci-Evo-Bench)
 
-每条 L2 TransitionAtom 可以作为 closed-form 题目：mask `transition_record.newly_introduced_mechanisms`，让模型从 paper A 的 limitation + paper B 的 hypothesis 倒推。详见 `release/eval/` 目录（构建中）。
+每条 L2 TransitionAtom 可以作为 closed-form 题目：mask `transition_record.newly_introduced_mechanisms`，让模型从 paper A 的 limitation + paper B 的 hypothesis 倒推。
 
 ## 7. 数据集应用场景
 
@@ -205,24 +211,22 @@ Multi-perspective dynamics validation：用 LLM narrative 推理作为 gene-leve
 - **MinerU**: Cloud API v4（已注册账号）；Local MinerU2.5-Pro-2604-1.2B
 - **GPT-5.5**: Azure OpenAI deployment `t2vgoaigpt4o3`, api_version `2024-12-01-preview`，使用 Managed Identity 认证
 - **Semantic Scholar API**: graph v1, 用 official key
-- **docling**: 兜底解析器，已使用 13,404 篇旧 PDF（标记为 `parse_tool=docling`）
+- **docling**: 兜底解析器，本 release 中 3,011 条 L1 记录标记为 `parse_tool=docling`
 - Python 3.10+, conda env `idea`（torch 2.5+cu121, transformers 5.8+, openai, peft, networkx）
 
 ## 10. 开源协议
 
 - **数据集**：CC-BY-4.0
 - **代码**：MIT
-- **托管位置**：
-  - 数据：OpenDataLab `<auto>`
-  - 代码：GitHub `<auto>`
+- **托管位置**：https://github.com/Geniusyingmanji/idea-data
 
 ## 11. 加分项
 
 - ✅ 完整构建过程代码已开源（`scripts/`）
 - ✅ 复现路径包括 MinerU Cloud + Local 两条
 - ✅ 跨学科覆盖（CS / Biology / Chemistry / Materials / Medicine / Physics / Earth Science / Cross-Domain）
-- ⏳ PPT/视频介绍（calendar item）
+- PPT/视频材料未纳入当前仓库；如比赛平台支持，可作为额外附件单独提交。
 
 ---
 
-*报告自动更新自 `release/audit_stats.json`。最后更新：2026-05-27T18:25:56Z。*
+*报告统计对应 `release/audit_stats.json`。最后更新：2026-05-30T13:07:07Z。*

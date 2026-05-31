@@ -36,6 +36,7 @@ CC-BY-4.0. Source papers via open access (arXiv / Semantic Scholar / openAccessP
 
 ## Files
 - `samples/sample_*.json`     — exemplars matching the 3-section schema
+- `../raw_samples/source_metadata_samples.json` — source metadata/abstract samples for provenance inspection
 - `data/full_dataset.jsonl.gz` — unified 4-layer dataset, one JSON per line
 - `data/layer_*.jsonl.gz`     — per-layer split for selective download
 - `schema.json`               — JSON Schema (Draft 2020-12)

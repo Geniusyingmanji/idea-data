@@ -1,0 +1,126 @@
+{
+  "description": "Representative raw source metadata/abstract samples used before SciEvo-Lineage structuring. PDFs are not redistributed here; public identifiers and open links are provided for traceability.",
+  "source_policy": "Public metadata and abstracts were collected through Semantic Scholar, arXiv, DOI/open-access links, and openAccessPdf when available. Only derived structured records are released in release/data/.",
+  "records": [
+    {
+      "paper_id": "s2:c4c66673c33fa4784cee5663796e919ff44cc8a6",
+      "s2_id": "c4c66673c33fa4784cee5663796e919ff44cc8a6",
+      "title": "Deep Learning Methods for Small Molecule Drug Discovery: A Survey",
+      "year": 2023,
+      "domain": "chemistry",
+      "fields_of_study": ["Computer Science", "Biology"],
+      "external_ids": {"arxiv": "2303.00313", "doi": "10.1109/TAI.2023.3251977"},
+      "open_links": {"arxiv_abs": "https://arxiv.org/abs/2303.00313", "doi": "https://doi.org/10.1109/TAI.2023.3251977"},
+      "abstract_excerpt": "A comprehensive review of deep learning applications in small molecule drug discovery, including molecule generation, property prediction, retrosynthesis prediction, reaction prediction, datasets, evaluation metrics, remaining challenges, and future trends.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "paper:learning_phase_transitions_by_confusion:2016",
+      "s2_id": "4a9678a38a70429588541518e8ed33995beb4baa",
+      "title": "Learning phase transitions by confusion",
+      "year": 2016,
+      "domain": "physics",
+      "fields_of_study": ["Physics"],
+      "external_ids": {"arxiv": "1610.02048", "doi": "10.1038/nphys4037"},
+      "open_links": {"arxiv_abs": "https://arxiv.org/abs/1610.02048", "doi": "https://doi.org/10.1038/nphys4037"},
+      "abstract_excerpt": "A neural-network approach identifies phase transitions by training with deliberately incorrect labels, demonstrated on the Kitaev chain, the classical Ising model, and a many-body-localization transition.",
+      "parse_tool": "docling"
+    },
+    {
+      "paper_id": "s2:da6651b72fc32da97e8ad9c9a70836ebae5b02d0",
+      "s2_id": "da6651b72fc32da97e8ad9c9a70836ebae5b02d0",
+      "title": "Machine Learning for Multi-Target Drug Discovery: Challenges and Opportunities in Systems Pharmacology",
+      "year": 2025,
+      "domain": "medicine",
+      "fields_of_study": ["Medicine"],
+      "external_ids": {"arxiv": null, "doi": "10.3390/pharmaceutics17091186"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.3390/pharmaceutics17091186"},
+      "abstract_excerpt": "A review of machine learning for multi-target drug discovery, covering multi-target prediction, graph-based and multi-task models, oncology, central nervous system disorders, drug repurposing, interpretability, and regulatory issues.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "s2:e7fe7cd34cfe00562e09b12961f9d71568d60774",
+      "s2_id": "e7fe7cd34cfe00562e09b12961f9d71568d60774",
+      "title": "Review on design strategies and applications of metal-organic framework-cellulose composites",
+      "year": 2022,
+      "domain": "materials",
+      "fields_of_study": ["Medicine"],
+      "external_ids": {"arxiv": null, "doi": "10.1016/j.carbpol.2022.119539"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.1016/j.carbpol.2022.119539"},
+      "abstract_excerpt": "A review of MOF/cellulose composite fabrication routes, three-dimensional bio-based cellulosic scaffolds, adsorption, antibacterial uses, protein immobilization, chemical sensors, energy storage, and future directions.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "s2:bdf4af8311637c681904e71cf50f96fd0026f578",
+      "s2_id": "bdf4af8311637c681904e71cf50f96fd0026f578",
+      "title": "Magic3D: High-Resolution Text-to-3D Content Creation",
+      "year": 2022,
+      "domain": "cs",
+      "fields_of_study": ["Computer Science"],
+      "external_ids": {"arxiv": "2211.10440", "doi": "10.1109/CVPR52729.2023.00037"},
+      "open_links": {"arxiv_abs": "https://arxiv.org/abs/2211.10440", "doi": "https://doi.org/10.1109/CVPR52729.2023.00037"},
+      "abstract_excerpt": "A two-stage text-to-3D optimization framework first obtains a coarse model with a low-resolution diffusion prior and sparse 3D hash grid, then optimizes a textured 3D mesh with a high-resolution latent diffusion model.",
+      "parse_tool": "mineru_pipeline"
+    },
+    {
+      "paper_id": "s2:3c7f5e90fbb01ce5f11f7ad031980cb5122bcbaa",
+      "s2_id": "3c7f5e90fbb01ce5f11f7ad031980cb5122bcbaa",
+      "title": "Molecular Simulation for Atmospheric Reactions: Non-Equilibrium Dynamics, Roaming, and Glycolaldehyde Formation following Photoinduced Decomposition of syn-Acetaldehyde Oxide",
+      "year": 2023,
+      "domain": "earth_science",
+      "fields_of_study": ["Medicine"],
+      "external_ids": {"arxiv": null, "doi": "10.1021/acs.jpclett.3c03131"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.1021/acs.jpclett.3c03131"},
+      "abstract_excerpt": "Molecular dynamics simulations with a neural-network-based potential energy surface characterize decomposition dynamics, OH elimination, roaming, and glycolaldehyde formation in atmospheric reactions.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "paper:light_attention_predicts_protein_location_from_the_language_:2021",
+      "s2_id": "46743872c08ecf37896288db39f473a5cdfd0710",
+      "title": "Light attention predicts protein location from the language of life",
+      "year": 2021,
+      "domain": "biology",
+      "fields_of_study": ["Medicine", "Computer Science", "Biology"],
+      "external_ids": {"arxiv": null, "doi": "10.1101/2021.04.25.441334"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.1101/2021.04.25.441334"},
+      "abstract_excerpt": "Protein language model embeddings and a lightweight attention architecture are used for protein subcellular localization prediction without multiple sequence alignments.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "s2:bca8879edc5fe2e105120c59d2263e570c1f26d0",
+      "s2_id": "bca8879edc5fe2e105120c59d2263e570c1f26d0",
+      "title": "Context-dependent design of induced-fit enzymes using deep learning generates well-expressed, thermally stable and active enzymes",
+      "year": 2023,
+      "domain": "chemistry",
+      "fields_of_study": ["Biology", "Medicine"],
+      "external_ids": {"arxiv": null, "doi": "10.1073/pnas.2313809121"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.1073/pnas.2313809121"},
+      "abstract_excerpt": "CoSaNN uses deep learning for conformation sampling and sequence optimization in enzyme design, with SolvIT as an expression/solubility optimization layer.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "s2:26f20d69b2f72b427c6c53e6bce809a6fccaafbc",
+      "s2_id": "26f20d69b2f72b427c6c53e6bce809a6fccaafbc",
+      "title": "Machine-learning-accelerated discovery of single-atom catalysts based on bidirectional activation mechanism",
+      "year": 2021,
+      "domain": "chemistry",
+      "fields_of_study": ["Computer Science"],
+      "external_ids": {"arxiv": null, "doi": "10.1016/J.CHECAT.2021.03.003"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.1016/J.CHECAT.2021.03.003"},
+      "abstract_excerpt": "Density functional theory and machine learning are combined to analyze 126 single-atom catalysts, define a bidirectional activation mechanism, and predict catalytic performance for nitrogen reduction.",
+      "parse_tool": "none"
+    },
+    {
+      "paper_id": "s2:9700086b7281041560da00301f0f3b61e21503b5",
+      "s2_id": "9700086b7281041560da00301f0f3b61e21503b5",
+      "title": "Machine Learning Big Data Set Analysis Reveals C-C Electro-Coupling Mechanism",
+      "year": 2024,
+      "domain": "chemistry",
+      "fields_of_study": ["Medicine"],
+      "external_ids": {"arxiv": null, "doi": "10.1021/jacs.4c09079"},
+      "open_links": {"arxiv_abs": null, "doi": "https://doi.org/10.1021/jacs.4c09079"},
+      "abstract_excerpt": "A 2D-3D ensemble machine learning strategy expands quantum chemical calculation data to analyze C-C coupling mechanisms and screen catalyst compositions for CO2 reduction.",
+      "parse_tool": "none"
+    }
+  ]
+}

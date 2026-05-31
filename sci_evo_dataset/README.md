@@ -4,7 +4,7 @@
 
 每篇论文的研究过程（问题、方法、结果、失败）被结构化抽取出来，相邻论文之间的演化关系也被显式标注，多篇论文串成领域级演化链，链上还演练了 AI 科研代理的 ReAct 轨迹。
 
-13,050 条记录，14 个学科，全部基于公开论文（arXiv / Semantic Scholar / MinerU 解析）构建。
+13,050 条记录，14 个规范化学科/子领域标签，全部基于公开论文（arXiv / Semantic Scholar / openAccessPdf / MinerU 解析结果）构建。
 
 ## 四层结构
 
@@ -21,17 +21,17 @@
 
 ## 仓库布局
 
-代码、文档、样例和压缩数据都在 git 仓库里。原始未压缩数据（约 500 MB）保存在本机 `/data/zyf/sci_evo_dataset/`，不进 git。
+代码、文档、样例和压缩数据都在 git 仓库里。大规模中间产物和未压缩工作目录不纳入 git；用于说明来源结构的公开论文元数据/摘要样例见 `raw_samples/`。
 
 ```
 sci_evo_dataset/
 ├── README.md             本文件
 ├── SCHEMA.md             字段定义
 ├── LICENSE               CC-BY-4.0
+├── raw_samples/          原始来源数据样例
 ├── scripts/              15 个构建脚本
 ├── tech_report/
-│   ├── REPORT.md         技术报告
-│   └── IDEAEVOLVING_V2_DELTA.md
+│   └── REPORT.md         技术报告
 └── release/
     ├── OVERVIEW.md       数据发布说明
     ├── data/             gzip 全量 + 4 层独立文件
@@ -64,6 +64,11 @@ with gzip.open("release/data/layer_paper_atom.jsonl.gz", "rt") as f:
         # cl["01_initial_request"], cl["02_agent_trajectory"],
         # cl["03_success_verification"], cl["04_failure_modes"]
 ```
+
+## 样例
+
+- 完整 L1 样例：`release/samples/`，共 38 条，均包含 `01_initial_request` / `02_agent_trajectory` / `03_success_verification` / `04_failure_modes`。
+- 原始来源样例：`raw_samples/source_metadata_samples.json`，共 10 条公开论文元数据/摘要样例，保留 Semantic Scholar ID、arXiv/DOI 链接和解析工具来源。
 
 ## 复现
 

@@ -1,6 +1,6 @@
 # SciEvo-Lineage Dataset Schema
 
-Three-layer architecture aligned with the Sci-Evo competition official sample
+Four-layer architecture aligned with the Sci-Evo competition official sample
 (`Sci-Evo_tool_case.json`), IdeaEvolving paper/genome/diff/trace schema,
 and idea_train agentic ReAct trajectory format.
 
@@ -175,7 +175,16 @@ JSONL — one demo per line, format compatible with idea_train SFT loader:
 }
 ```
 
-## Domain taxonomy (8 domains)
+## Annotation Guidelines
+
+- Do not invent scientific claims, experimental results, metrics, or datasets. L1 steps must reflect work described in the source paper or its public abstract.
+- Use `[Background] / [Gap] / [Decision]` in L1 `thought` fields to separate known context, missing evidence, and the next research action.
+- Mark `valid=false` only when a step is explicitly a failed/invalid branch in the paper narrative; otherwise record limitations in `04_failure_modes`.
+- L2 `gap_in_A`, `hypothesis_for_B`, and `experimental_validation_in_B` should be grounded in the source/target paper pair, not only citation proximity.
+- L3 paper order follows the lineage/citation chronology used by the construction pipeline; `remaining_gap` should describe the open problem left after each milestone.
+- L4 records are simulated agent demonstrations for training. They must keep `ground_truth_next_paper_id` or lineage references so the simulated action remains auditable.
+
+## Main Domain Taxonomy
 
 - `cs` — computer science (LLM reasoning, agents, vision, RL, systems)
 - `biology` — directed evolution, protein design, drug discovery, gene editing
